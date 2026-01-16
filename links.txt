@@ -1,0 +1,10 @@
+formatting: https://rust-lang.github.io/rustfmt/?version=v1.8.0&search=
+
+websocket: https://github.com/snapview/tokio-tungstenite
+http: https://github.com/seanmonstar/reqwest
+tokio: https://github.com/tokio-rs/tokio
+
+json to serde: https://transform.tools/json-to-rust-serde
+
+
+C:\Users\Telokis\AppData\Roaming\Code\User\workspaceStorage.
