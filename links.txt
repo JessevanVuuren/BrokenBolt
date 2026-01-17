@@ -8,3 +8,5 @@ json to serde: https://transform.tools/json-to-rust-serde
 
 
 C:\Users\Telokis\AppData\Roaming\Code\User\workspaceStorage.
+
+

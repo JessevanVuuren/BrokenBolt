@@ -1,25 +1,36 @@
 use std::{thread, time::Duration};
 
-use futures_util::{SinkExt, StreamExt, future, pin_mut, stream::SplitSink};
+use futures_util::{
+    SinkExt, StreamExt, future, pin_mut,
+    stream::{SplitSink, SplitStream},
+};
+use serde::Deserializer;
+use serde_json::Value;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
-    sync::mpsc::{self, UnboundedReceiver},
+    sync::mpsc::{self, UnboundedReceiver, UnboundedSender},
     task::JoinHandle,
 };
 use tokio_tungstenite::{
     MaybeTlsStream, WebSocketStream, connect_async,
-    tungstenite::{Error, Message},
+    tungstenite::{Error, Message, http::method},
 };
 
-use crate::api::channels::Channel;
+use crate::api::channels::{self, Channel};
 
 pub struct Socket {
     channels: Vec<Channel>,
     read: Option<JoinHandle<()>>,
     write: Option<SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>>,
     pub recv_err: Option<UnboundedReceiver<Error>>,
-    pub recv_msg: Option<UnboundedReceiver<Message>>,
+    pub recv_msg: Option<UnboundedReceiver<Incoming>>,
+}
+
+pub struct Incoming {
+    pub message: Message,
+    pub channel: String,
+    pub pair: String,
 }
 
 impl Socket {
@@ -48,12 +59,7 @@ impl Socket {
         let (send_msg, recv_msg) = mpsc::unbounded_channel();
 
         let read = tokio::spawn(async move {
-            while let Some(msg) = read.next().await {
-                match msg {
-                    Err(error) => send_err.send(error).unwrap(),
-                    Ok(message) => send_msg.send(message).unwrap(),
-                }
-            }
+            Socket::handle_message(&mut read, send_err, send_msg).await;
         });
 
         self.read = Some(read);
@@ -62,6 +68,44 @@ impl Socket {
         self.recv_msg = Some(recv_msg);
 
         Ok(())
+    }
+
+    async fn handle_message(read: &mut SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>, send_err: UnboundedSender<Error>, send_msg: UnboundedSender<Incoming>) {
+        while let Some(msg) = read.next().await {
+            match msg {
+                Err(error) => {
+                    let _ = send_err.send(error);
+                }
+                Ok(raw) => {
+                    if let Ok(msg) = Socket::build_message(raw) {
+                        let _ = send_msg.send(msg);
+                    }
+                }
+            }
+        }
+    }
+
+    fn build_message(message: Message) -> Result<Incoming, std::io::Error> {
+        let object: Value = serde_json::from_str(&message.to_string())?;
+
+        let mut channel = String::new();
+        let mut pair = String::new();
+
+        if let (Some(c), Some(p)) = (object.pointer("/method").and_then(Value::as_str), object.pointer("/result/symbol").and_then(Value::as_str)) {
+            channel = c.to_owned();
+            pair = p.to_owned();
+        } else if let (Some(c), Some(p)) = (object.pointer("/channel").and_then(Value::as_str), object.pointer("/data/0/symbol").and_then(Value::as_str)) {
+            channel = c.to_owned();
+            pair = p.to_owned();
+        } else if let Some(c) = object.pointer("/channel").and_then(Value::as_str) {
+            channel = c.to_owned();
+        }
+
+        Ok(Incoming {
+            message,
+            channel,
+            pair,
+        })
     }
 
     pub async fn send(&mut self, message: &str) {

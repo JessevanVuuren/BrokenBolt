@@ -60,3 +60,67 @@ pub struct _AckResult {
     pub snapshot: bool,
     pub symbol: String,
 }
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Ticker {
+    pub channel: String,
+    #[serde(rename = "type")]
+    pub type_field: String,
+    pub data: Vec<TickerData>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TickerData {
+    pub symbol: String,
+    pub bid: f64,
+    #[serde(rename = "bid_qty")]
+    pub bid_qty: f64,
+    pub ask: f64,
+    #[serde(rename = "ask_qty")]
+    pub ask_qty: f64,
+    pub last: f64,
+    pub volume: f64,
+    pub vwap: f64,
+    pub low: f64,
+    pub high: f64,
+    pub change: f64,
+    #[serde(rename = "change_pct")]
+    pub change_pct: f64,
+    #[serde(rename = "volume_usd")]
+    pub volume_usd: f64,
+    pub timestamp: String,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrderBook {
+    pub channel: String,
+    #[serde(rename = "type")]
+    pub type_field: String,
+    pub data: Vec<OrderBookData>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrderBookData {
+    pub symbol: String,
+    pub bids: Vec<Bid>,
+    pub asks: Vec<Ask>,
+    pub checksum: i64,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Bid {
+    pub price: f64,
+    pub qty: f64,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Ask {
+    pub price: f64,
+    pub qty: f64,
+}
