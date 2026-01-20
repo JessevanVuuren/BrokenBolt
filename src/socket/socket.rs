@@ -17,7 +17,7 @@ use tokio_tungstenite::{
     tungstenite::{Error, Message, http::method},
 };
 
-use crate::api::channels::{self, Channel};
+use crate::socket::channels::{self, Channel};
 
 pub struct Socket {
     channels: Vec<Channel>,
@@ -110,7 +110,6 @@ impl Socket {
 
     pub async fn send(&mut self, message: &str) {
         if let Some(mut write) = self.write.as_mut() {
-            println!("sending");
             write.send(Message::Text(message.into())).await;
         }
     }

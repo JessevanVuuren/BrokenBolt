@@ -3,10 +3,23 @@ formatting: https://rust-lang.github.io/rustfmt/?version=v1.8.0&search=
 websocket: https://github.com/snapview/tokio-tungstenite
 http: https://github.com/seanmonstar/reqwest
 tokio: https://github.com/tokio-rs/tokio
-
 json to serde: https://transform.tools/json-to-rust-serde
+crc32fast checksum: https://github.com/srijs/rust-crc32fast/tree/master
 
 
 C:\Users\Telokis\AppData\Roaming\Code\User\workspaceStorage.
 
 
+Type	Bits	Min	                                                    Max
+i8	    8	    −128	                                                127
+i16	    16	    −32,768	                                                32,767
+i32	    32	    −2,147,483,648	                                        2,147,483,647
+i64	    64	    −9,223,372,036,854,775,808	                            9,223,372,036,854,775,807
+i128	128	    −170,141,183,460,469,231,731,687,303,715,884,105,728	170,141,183,460,469,231,731,687,303,715,884,105,727
+
+Type	Bits	Min                                                     Max
+u8	    8	    0	                                                    255
+u16	    16	    0	                                                    65,535
+u32	    32	    0	                                                    4,294,967,295
+u64	    64	    0	                                                    18,446,744,073,709,551,615
+u128	128	    0	                                                    340,282,366,920,938,463,463,374,607,431,768,211,455

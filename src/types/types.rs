@@ -45,7 +45,7 @@ pub struct Params {
 #[serde(rename_all = "camelCase")]
 pub struct SubscribeAck {
     pub method: String,
-    pub result: _AckResult,
+    pub result: AckResult,
     pub success: bool,
     #[serde(rename = "time_in")]
     pub time_in: String,
@@ -55,7 +55,7 @@ pub struct SubscribeAck {
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct _AckResult {
+pub struct AckResult {
     pub channel: String,
     pub snapshot: bool,
     pub symbol: String,
@@ -63,7 +63,7 @@ pub struct _AckResult {
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Ticker {
+pub struct TickerType {
     pub channel: String,
     #[serde(rename = "type")]
     pub type_field: String,
@@ -95,7 +95,7 @@ pub struct TickerData {
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct OrderBook {
+pub struct OrderBookType {
     pub channel: String,
     #[serde(rename = "type")]
     pub type_field: String,
@@ -108,7 +108,7 @@ pub struct OrderBookData {
     pub symbol: String,
     pub bids: Vec<Bid>,
     pub asks: Vec<Ask>,
-    pub checksum: i64,
+    pub checksum: u32,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]

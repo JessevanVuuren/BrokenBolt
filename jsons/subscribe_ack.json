@@ -12,14 +12,41 @@
 }
 
 {
-  "channel": "status",
-  "type": "update",
-  "data": [
-    {
-      "version": "2.0.10",
-      "system": "online",
-      "api_version": "v2",
-      "connection_id": 2078389294117416000
-    }
-  ]
+    "channel": "status",
+    "type": "update",
+    "data": [
+        {
+            "version": "2.0.10",
+            "system": "online",
+            "api_version": "v2",
+            "connection_id": 2078389294117416000
+        }
+    ]
+}
+
+{
+    "channel": "heartbeat"
+}
+
+{
+    "channel": "ticker",
+    "type": "update",
+    "data": [
+        {
+            "symbol": "BTC/USD",
+            "bid": 95075.0,
+            "bid_qty": 0.05988237,
+            "ask": 95075.1,
+            "ask_qty": 1.34537692,
+            "last": 95075.1,
+            "volume": 1015.51141947,
+            "vwap": 95138.0,
+            "low": 94260.4,
+            "high": 95774.7,
+            "change": -159.9,
+            "change_pct": -0.17,
+            "volume_usd": 96549849.76,
+            "timestamp": "2026-01-17T11:03:57.117620Z"
+        }
+    ]
 }
