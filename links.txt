@@ -10,6 +10,8 @@ crc32fast checksum: https://github.com/srijs/rust-crc32fast/tree/master
 C:\Users\Telokis\AppData\Roaming\Code\User\workspaceStorage.
 
 
+line count -> find . | xargs wc -l
+
 Type	Bits	Min	                                                    Max
 i8	    8	    −128	                                                127
 i16	    16	    −32,768	                                                32,767
