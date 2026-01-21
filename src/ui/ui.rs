@@ -9,25 +9,66 @@ use ratatui::{
 use crate::ui::app::App;
 
 pub fn ui(frame: &mut Frame, app: &App) {
-    let orderbook = Layout::default().direction(Direction::Vertical).constraints([Constraint::Percentage(50), Constraint::Percentage(50)]).split(frame.area());
+    let main_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .split(frame.area());
 
-    let orderbook_block = Block::default().borders(Borders::ALL).style(Style::default());
+    let top_layout = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .split(main_layout[0]);
 
+    let top_right_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Max(10), Constraint::Fill(1)])
+        .split(top_layout[1]);
 
-    let orderbook_table_l = Layout::vertical([Constraint::Percentage(100)]).split(orderbook[0]);
+    let orderbook_layout = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .split(top_right_layout[0]);
+
+    let block = Block::new().borders(Borders::ALL).title("Bottom area");
+    frame.render_widget(block, main_layout[1]);
+
+    let block = Block::new().borders(Borders::ALL).title("Top left area");
+    frame.render_widget(block, top_layout[0]);
+
+    let block = Block::new()
+        .borders(Borders::ALL)
+        .title("Top right bottom area");
+    frame.render_widget(block, top_right_layout[1]);
 
     let widths = [Constraint::Percentage(50), Constraint::Percentage(50)];
 
-
-    let headers = Row::new(vec!["price", "quantity"]);
-    let rows = app.orderbook.asks.iter().enumerate().map(|(i, t)| {
+    let ask_rows = app.orderbook.asks.iter().enumerate().map(|(i, t)| {
         let color = match i % 2 {
             0 => Color::Blue,
             _ => Color::Red,
         };
-        Row::new(vec![Cell::from(t.0.to_string()), Cell::from(t.1.to_string())]).style(Style::new().bg(color))
+        Row::new(vec![
+            Cell::from(t.0.to_string()),
+            Cell::from(t.1.to_string()),
+        ])
+        .style(Style::new().bg(color))
     });
 
-    let table = Table::new(rows, widths).block(orderbook_block).header(headers);
-    frame.render_widget(table, orderbook[0]);
+    let bid_rows = app.orderbook.bids.iter().enumerate().map(|(i, t)| {
+        let color = match i % 2 {
+            0 => Color::Blue,
+            _ => Color::Red,
+        };
+        Row::new(vec![
+            Cell::from(t.0.0.to_string()),
+            Cell::from(t.1.to_string()),
+        ])
+        .style(Style::new().bg(color))
+    });
+
+    let ask_table = Table::new(ask_rows, widths).header(Row::new(vec!["price", "quantity"]));
+    let bid_table = Table::new(bid_rows, widths).header(Row::new(vec!["price", "quantity"]));
+
+    frame.render_widget(ask_table, orderbook_layout[0]);
+    frame.render_widget(bid_table, orderbook_layout[1]);
 }

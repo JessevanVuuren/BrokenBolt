@@ -43,13 +43,7 @@ impl OrderBook {
     }
 
     pub fn stream(&mut self, data: OrderBookType) {
-        // if (data.type_field == "snapshot") {
-        //     self.build(&data.data[0]);
-        // }
-
-        // if (data.type_field == "update") {
-            self.update(&data.data[0]);
-        // }
+        self.update(&data.data[0]);
 
         if let Some((&key, _)) = self.asks.iter().nth(10) {
             self.asks.split_off(&key);
@@ -63,24 +57,6 @@ impl OrderBook {
             panic!("ERROR: checksum did not match")
         }
     }
-
-    // fn build(&mut self, data: &OrderBookData) {
-    //     let price_precision = self.asset_info.pair_decimals;
-    //     let qty_precision = self.asset_info.lot_decimals;
-    //     println!("Building orderbook");
-
-    //     for bid in data.bids.iter() {
-    //         let key = encode_fixed(price_precision, bid.price);
-    //         let qty = encode_fixed(qty_precision, bid.qty);
-    //         self.bids.insert(Reverse(key), qty);
-    //     }
-
-    //     for ask in data.asks.iter() {
-    //         let key = encode_fixed(price_precision, ask.price);
-    //         let qty = encode_fixed(qty_precision, ask.qty);
-    //         self.asks.insert(key, qty);
-    //     }
-    // }
 
     fn update(&mut self, data: &OrderBookData) {
         let price_precision = self.asset_info.pair_decimals;
