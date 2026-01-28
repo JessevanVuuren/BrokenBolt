@@ -1,0 +1,41 @@
+fn order_book_row(index: usize, price: i64, qty: i64, total: f64, width: u16) -> Row<'static> {
+    let scale = total as usize;
+    // let scale = 20;
+    let half = (width / 2) as usize;
+
+    let mut strs_price: Vec<Span<'static>> = Vec::new();
+    let mut strs_qty: Vec<Span<'static>> = Vec::new();
+
+    let price: String = format!("{}{}", price.to_string(), " ".repeat(width.into()));
+    let qty: String = format!("{}{}", price.to_string(), " ".repeat(width.into()));
+    
+    let strings = price.split_at(scale as usize);
+
+    if scale < price.chars().count() {
+        let strings = price.split_at(scale as usize);
+        strs_price.push(Span::from(strings.0.to_owned()).style(Style::new().bg(Color::Green)));
+        strs_price.push(Span::from(strings.1.to_owned()).style(Style::new().bg(Color::Black)));
+    } else {
+        strs_price.push(Span::from(price).style(Style::new().bg(Color::Black)));
+    }
+
+    if scale > half {
+        let strings = qty.split_at(scale - half - 1);
+        strs_qty.push(Span::from(strings.0.to_owned()).style(Style::new().bg(Color::Green)));
+        strs_qty.push(Span::from(strings.1.to_owned()).style(Style::new().bg(Color::Black)));
+    } else {
+        strs_qty.push(Span::from(qty).style(Style::new().bg(Color::Black)));
+    }
+
+    let mut style = Style::new();
+    if scale > half  {
+        style = Style::new().bg(Color::Green);
+    }
+
+    Row::new(vec![
+        Cell::from(Line::from(strs_price)),
+        Cell::from(Line::from(strs_qty)),
+        // Cell::from(half.to_string()),
+    ])
+    .style(style)
+}

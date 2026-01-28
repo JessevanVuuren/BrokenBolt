@@ -103,10 +103,30 @@ impl OrderBook {
         crc32fast::hash(final_string.as_bytes())
     }
 
+    pub fn price_decoded(&self, price: i64) -> f64 {
+        decode_fixed(self.asset_info.pair_decimals, price)
+    }
+
+    pub fn qty_decoded(&self, qty: i64) -> f64 {
+        decode_fixed(self.asset_info.lot_decimals, qty)
+    }
+
+    pub fn ask_decode(&self, pair: (&i64, &i64)) -> (f64, f64) {
+        (self.price_decoded(*pair.0), self.qty_decoded(*pair.1))
+    }
+    
+    pub fn bid_decode(&self, pair: (&Reverse<i64>, &i64)) -> (f64, f64) {
+        (self.price_decoded(pair.0.0), self.qty_decoded(*pair.1))
+    }
+
     pub fn print_table(&mut self, size: u8) {
         let price_precision = self.asset_info.pair_decimals;
         let qty_precision = self.asset_info.lot_decimals;
-        println!("Update orderbook, bid: {}, ask: {}", self.bids.len(), self.asks.len());
+        println!(
+            "Update orderbook, bid: {}, ask: {}",
+            self.bids.len(),
+            self.asks.len()
+        );
 
         for entry in self.bids.iter() {
             let price = decode_fixed(price_precision, entry.0.0);
