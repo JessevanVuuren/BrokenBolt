@@ -114,10 +114,12 @@ impl Socket {
         }
     }
 
-    pub async fn subscribe_to_channels(&mut self) {
+    pub async fn subscribe_to_channels(&mut self, log:bool) {
         let channels: Vec<String> = self.channels.iter().map(|c| c.subscription()).collect();
         for channel in channels {
-            println!("Subscribe -> {}", channel);
+            if log {
+                println!("Subscribe -> {}", channel);
+            }
             self.send(&channel).await;
         }
     }

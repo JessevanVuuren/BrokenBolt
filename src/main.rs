@@ -28,6 +28,7 @@ use crate::urls::WEBSOCKET_URL;
 
 mod handler;
 mod point;
+mod error;
 mod socket;
 mod types;
 mod ui;
@@ -70,7 +71,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut web = Socket::new(vec![orderbook_channel]);
 
     web.start(WEBSOCKET_URL).await.expect("Error socket {}");
-    web.subscribe_to_channels().await;
+    web.subscribe_to_channels(false).await;
 
     let mut orderbook = OrderBook::new("BTC/EUR").await.expect("Failed to init orderbook");
 

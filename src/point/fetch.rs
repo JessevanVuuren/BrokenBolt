@@ -18,7 +18,7 @@ pub enum FetchError {
     ParseUrl(#[from] ParseError),
 }
 
-pub async fn fetch_params<T: DeserializeOwned>(url: &str, params: Vec<(&str, &str)>) -> Result<T, FetchError> {
+pub async fn fetch_params<T: DeserializeOwned>(url: &str, params: Vec<(&str, String)>) -> Result<T, FetchError> {
     let url = Url::parse_with_params(url, params)?;
 
     #[rustfmt::skip]

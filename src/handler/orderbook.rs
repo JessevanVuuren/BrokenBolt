@@ -3,7 +3,11 @@ use std::{cmp::Reverse, collections::BTreeMap, fmt::format, ops::Index, process:
 use serde_json::Value;
 
 use crate::{
-    point::fetch::{FetchError, fetch_params},
+    error::error::AssetPairError,
+    point::{
+        asset_pair::get_asset_pair,
+        fetch::{FetchError, fetch_params},
+    },
     types::{
         points::AssetPairs,
         types::{OrderBookData, OrderBookType},
@@ -14,29 +18,17 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct OrderBook {
-    pub asset_info: AssetPairs,
+    pub asset_pair: AssetPairs,
     pub asks: BTreeMap<i64, i64>,
     pub bids: BTreeMap<Reverse<i64>, i64>,
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum OrderBookError {
-    #[error(transparent)]
-    Fetch(#[from] FetchError),
-
-    #[error(transparent)]
-    Parse(#[from] NestedParseError),
-}
-
 impl OrderBook {
-    pub async fn new(pair: &str) -> Result<Self, OrderBookError> {
-        let params = vec![("pair", pair)];
-        let mut data: Value = fetch_params(ASSET_PAIRS_URL, params).await?;
-        let path = format!("/result/{}", pair.replace('/', "~1"));
-        let assets: AssetPairs = nested_object(&path, &mut data)?;
+    pub async fn new(pair: &str) -> Result<Self, AssetPairError> {
+        let asset_pair = get_asset_pair(pair).await?;
 
         Ok(Self {
-            asset_info: assets,
+            asset_pair,
             bids: BTreeMap::new(),
             asks: BTreeMap::new(),
         })
@@ -59,8 +51,8 @@ impl OrderBook {
     }
 
     fn update(&mut self, data: &OrderBookData) {
-        let price_precision = self.asset_info.pair_decimals;
-        let qty_precision = self.asset_info.lot_decimals;
+        let price_precision = self.asset_pair.pair_decimals;
+        let qty_precision = self.asset_pair.lot_decimals;
 
         for bid in data.bids.iter() {
             let key = encode_fixed(price_precision, bid.price);
@@ -84,8 +76,8 @@ impl OrderBook {
     }
 
     pub fn checksum(&mut self) -> u32 {
-        let price_precision = self.asset_info.pair_decimals;
-        let qty_precision = self.asset_info.lot_decimals;
+        let price_precision = self.asset_pair.pair_decimals;
+        let qty_precision = self.asset_pair.lot_decimals;
 
         let mut ask_string = String::new();
         for entry in self.asks.iter() {
@@ -104,43 +96,33 @@ impl OrderBook {
     }
 
     pub fn price_decoded(&self, price: i64) -> f64 {
-        decode_fixed(self.asset_info.pair_decimals, price)
+        decode_fixed(self.asset_pair.pair_decimals, price)
     }
 
     pub fn qty_decoded(&self, qty: i64) -> f64 {
-        decode_fixed(self.asset_info.lot_decimals, qty)
+        decode_fixed(self.asset_pair.lot_decimals, qty)
     }
 
     pub fn ask_decode(&self, pair: (&i64, &i64)) -> (f64, f64) {
         (self.price_decoded(*pair.0), self.qty_decoded(*pair.1))
     }
-    
+
     pub fn bid_decode(&self, pair: (&Reverse<i64>, &i64)) -> (f64, f64) {
         (self.price_decoded(pair.0.0), self.qty_decoded(*pair.1))
     }
 
     pub fn print_table(&mut self, size: u8) {
-        let price_precision = self.asset_info.pair_decimals;
-        let qty_precision = self.asset_info.lot_decimals;
-        println!(
-            "Update orderbook, bid: {}, ask: {}",
-            self.bids.len(),
-            self.asks.len()
-        );
+        println!("Update orderbook, bid: {}, ask: {}", self.bids.len(), self.asks.len());
 
         for entry in self.bids.iter() {
-            let price = decode_fixed(price_precision, entry.0.0);
-            let qty = decode_fixed(qty_precision, entry.1.clone());
-
+            let (price, qty) = self.bid_decode(entry);
             println!("Price: {}, Bid: {}", price, qty);
         }
 
         println!();
 
         for entry in self.asks.iter() {
-            let price = decode_fixed(price_precision, entry.0.clone());
-            let qty = decode_fixed(qty_precision, entry.1.clone());
-
+            let (price, qty) = self.ask_decode(entry);
             println!("Price: {}, Bid: {}", price, qty);
         }
         println!();
