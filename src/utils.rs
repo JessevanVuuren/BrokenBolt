@@ -1,6 +1,10 @@
+use chrono::Utc;
+use chrono::prelude::DateTime;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 use serde_json_fmt::JsonSyntaxError;
+use std::time::Duration;
+use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -26,4 +30,12 @@ pub fn encode_fixed(precision: i32, value: f64) -> i64 {
 pub fn decode_fixed(precision: i32, value: i64) -> f64 {
     let scale = 10_f64.powi(precision);
     value as f64 / scale
+}
+
+pub fn epoch_to_string(time: u64) -> String {
+    let d = UNIX_EPOCH + Duration::from_secs(time);
+
+    let datetime = DateTime::<Utc>::from(d);
+
+    datetime.to_rfc3339()
 }

@@ -52,7 +52,6 @@ impl Socket {
 
     pub async fn start(&mut self, url: &'static str) -> Result<(), Error> {
         let (stream, response) = connect_async(url).await?;
-        println!("WebSocket successfully connected to: {url}");
 
         let (write, mut read) = stream.split();
         let (send_err, recv_err) = mpsc::unbounded_channel();

@@ -23,6 +23,7 @@ url = "2.5.8"
 crc32fast = "1.5.0"
 ratatui = "0.30.0"
 crossterm = "0.29.0"
+chrono = "0.4.43"
 
 [lints.rust]
 unused = "allow"

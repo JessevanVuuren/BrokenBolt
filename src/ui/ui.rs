@@ -1,14 +1,27 @@
-use std::{cmp, collections::BTreeMap};
+use core::num;
+use std::{cmp, collections::BTreeMap, i32};
 
 use ratatui::{
     Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize},
+    symbols::Marker,
     text::{Line, Span, Text},
-    widgets::{Block, Borders, Cell, Clear, List, ListItem, Paragraph, Row, Table, Wrap},
+    widgets::{
+        Block, Borders, Cell, Clear, List, ListItem, Paragraph, Row, Table, Widget, Wrap,
+        canvas::{Canvas, Circle, Context, Map, MapResolution, Points, Rectangle},
+    },
 };
 
-use crate::ui::app::App;
+use crate::{
+    handler::candle::Candle,
+    types::candle::CandleStick,
+    ui::{
+        app::App,
+        pixels::{Pixel, Pixels},
+        utils::{layout_block_f, layout_block_i},
+    },
+};
 
 pub fn ui(frame: &mut Frame, app: &App) {
     let main_layout = Layout::default()
@@ -34,12 +47,15 @@ pub fn ui(frame: &mut Frame, app: &App) {
     let block = Block::new().borders(Borders::ALL).title("Bottom area");
     frame.render_widget(block, main_layout[1]);
 
-    let block = Block::new().borders(Borders::ALL).title("Top left area");
-    frame.render_widget(block, top_layout[0]);
+    let block_i = Block::new().borders(Borders::ALL).title("Top left area");
+    // frame.render_widget(block_i, top_layout[0]);
 
     let block = Block::new().borders(Borders::ALL).title("Top right bottom area");
     frame.render_widget(block, top_right_layout[1]);
 
+    //
+    // order book
+    //
     let widths = [Constraint::Percentage(50), Constraint::Percentage(50)];
 
     let book = &app.orderbook;
@@ -75,6 +91,56 @@ pub fn ui(frame: &mut Frame, app: &App) {
 
     frame.render_widget(ask_table, orderbook_layout[0]);
     frame.render_widget(bid_table, orderbook_layout[1]);
+
+    //
+    //
+    //
+
+    //
+    // candle sticks
+    //
+
+    let (x, y, w, h) = layout_block_f(&top_layout[0]);
+    let candle_range = app.candle.min_max(w as usize);
+
+    let mut candle_pixels = build_candle_pixels(&top_layout[0], &app.candle.candles, candle_range);
+    let mut pixels = Pixels::new(&top_layout[0]);
+    
+    pixels.add_pixels(&mut candle_pixels);
+    frame.render_widget(pixels, top_layout[0]);
+}
+
+fn build_candle_pixels(rect: &Rect, candles: &Vec<CandleStick>, range: (f64, f64)) -> Vec<Pixel> {
+    let (_, _, w, h) = layout_block_f(rect);
+    let scaler = range.1 - range.0;
+
+    let mut vec = Vec::new();
+    for (x_pos, candle) in candles.iter().enumerate().take(w as usize) {
+        let start = ((candle.open - range.0) / scaler * h) as u64;
+        let stop = ((candle.close - range.0) / scaler * h) as u64;
+
+        let diff = start.abs_diff(stop);
+        let range = if diff > 0 { (0..diff) } else { (0..1) };
+
+        let color = if candle.open < candle.close { Color::Green } else { Color::Red };
+
+        for i in range.into_iter() {
+            let x = x_pos as u16;
+
+            let mut y;
+            if candle.open > candle.close {
+                y = start - i;
+            } else {
+                y = start + i;
+            }
+
+            y = h as u64 - y;
+
+            vec.push(Pixel::new(x, y as u16).fg(color).char('█'));
+        }
+    }
+
+    vec
 }
 
 fn order_book_row(val1: f64, val2: f64, width: f64, bar_width: f64, color1: Color, color2: Color) -> Row<'static> {

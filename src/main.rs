@@ -7,6 +7,7 @@ use ratatui::crossterm::execute;
 use ratatui::crossterm::terminal::{EnterAlternateScreen, enable_raw_mode};
 use ratatui::crossterm::terminal::{LeaveAlternateScreen, disable_raw_mode};
 use ratatui::prelude::{Backend, CrosstermBackend};
+use core::panic::PanicMessage;
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::process::exit;
@@ -16,19 +17,20 @@ use std::time::Duration;
 use std::{io, thread};
 use tokio_tungstenite::tungstenite::Message;
 
+use crate::handler::candle::Candle;
 use crate::handler::orderbook::{self, OrderBook};
 use crate::point::fetch::fetch_params;
 use crate::socket::socket::Incoming;
 use crate::socket::{channels::Channel, socket::Socket};
 use crate::types::points::AssetPairs;
 use crate::types::types::{OrderBookData, OrderBookType, TickerType};
-use crate::ui::app::{App};
+use crate::ui::app::App;
 use crate::ui::ui::ui;
 use crate::urls::WEBSOCKET_URL;
 
+mod error;
 mod handler;
 mod point;
-mod error;
 mod socket;
 mod types;
 mod ui;
@@ -71,23 +73,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut web = Socket::new(vec![orderbook_channel]);
 
     web.start(WEBSOCKET_URL).await.expect("Error socket {}");
-    web.subscribe_to_channels(false).await;
+    // web.subscribe_to_channels(false).await;
 
     let mut orderbook = OrderBook::new("BTC/EUR").await.expect("Failed to init orderbook");
+    let candles = Candle::new("BTC/EUR", 60, 0).await.expect("Failed to init candle");
 
     let (event_tx, event_rx) = mpsc::channel::<State>();
 
-    let mut app = App::new(orderbook.clone());
+    let mut app = App::new(orderbook.clone(), candles.clone());
 
     let update_key = event_tx.clone();
-    thread::spawn(move || {
-        loop {
-            match read().unwrap() {
-                Event::Key(key_event) => update_key.send(State::Input(key_event)).unwrap(),
-                _ => {}
-            };
-        }
-    });
+    thread::spawn(move || read_user_input(update_key));
 
     let update_state = event_tx.clone();
     let main = tokio::spawn(async move {
@@ -109,6 +105,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
     terminal.show_cursor()?;
 
     Ok(())
+}
+
+fn read_user_input(sender: Sender<State>) {
+    loop {
+        match read().unwrap() {
+            Event::Key(key_event) => sender.send(State::Input(key_event)).unwrap(),
+            _ => {}
+        };
+    }
 }
 
 async fn incoming(msg: Incoming, soc: &mut Socket, orderbook: &mut OrderBook, update_ui: &Sender<State>) {
