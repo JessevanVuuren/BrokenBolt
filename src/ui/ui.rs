@@ -23,6 +23,9 @@ use crate::{
     },
 };
 
+const BULL_COLOR: Color = Color::Rgb(52, 208, 88);
+const BEAR_COLOR: Color = Color::Rgb(234, 74, 90);
+
 pub fn ui(frame: &mut Frame, app: &App) {
     let main_layout = Layout::default()
         .direction(Direction::Vertical)
@@ -48,10 +51,14 @@ pub fn ui(frame: &mut Frame, app: &App) {
     frame.render_widget(block, main_layout[1]);
 
     let block_i = Block::new().borders(Borders::ALL).title("Top left area");
-    // frame.render_widget(block_i, top_layout[0]);
+    frame.render_widget(&block_i, top_layout[0]);
 
     let block = Block::new().borders(Borders::ALL).title("Top right bottom area");
     frame.render_widget(block, top_right_layout[1]);
+
+    //
+    //
+    //
 
     //
     // order book
@@ -72,7 +79,7 @@ pub fn ui(frame: &mut Frame, app: &App) {
         scale_ask += t.1.clone() as f64 / max_scale as f64;
         let bar_width = (1. - scale_ask) * width;
 
-        order_book_row(qty, price, width, bar_width, Color::Rgb(180, 15, 15), Color::Black)
+        order_book_row(qty, price, width, bar_width, BEAR_COLOR, Color::Black)
     });
 
     let mut scale_bid = 0.;
@@ -83,7 +90,7 @@ pub fn ui(frame: &mut Frame, app: &App) {
         scale_bid += t.1.clone() as f64 / max_scale as f64;
         let bar_width = scale_bid * width;
 
-        order_book_row(price, qty, width, bar_width, Color::Black, Color::Rgb(0, 120, 0))
+        order_book_row(price, qty, width, bar_width, Color::Black, BULL_COLOR)
     });
 
     let ask_table = Table::new(ask_rows, widths).header(Row::new(vec!["quantity", "price"]));
@@ -100,47 +107,94 @@ pub fn ui(frame: &mut Frame, app: &App) {
     // candle sticks
     //
 
-    let (x, y, w, h) = layout_block_f(&top_layout[0]);
-    let candle_range = app.candle.min_max(w as usize);
+    let mut pixels = Pixels::new(&block_i.inner(top_layout[0]));
+    let candle_range = app.candle.min_max(pixels.width() as usize);
+    let mut candle_pixels = build_candle_pixels(&pixels.rect, &app.candle.candles, candle_range, BULL_COLOR, BEAR_COLOR);
 
-    let mut candle_pixels = build_candle_pixels(&top_layout[0], &app.candle.candles, candle_range);
-    let mut pixels = Pixels::new(&top_layout[0]);
-    
+    pixels.flip_y = true;
+    pixels.flip_x = true;
+
     pixels.add_pixels(&mut candle_pixels);
     frame.render_widget(pixels, top_layout[0]);
 }
 
-fn build_candle_pixels(rect: &Rect, candles: &Vec<CandleStick>, range: (f64, f64)) -> Vec<Pixel> {
-    let (_, _, w, h) = layout_block_f(rect);
+fn build_candle_pixels(rect: &Rect, candles: &Vec<CandleStick>, range: (f64, f64), bull: Color, bear: Color) -> Vec<Pixel> {
+    let (x, y, w, h) = layout_block_f(rect);
+
     let scaler = range.1 - range.0;
 
     let mut vec = Vec::new();
-    for (x_pos, candle) in candles.iter().enumerate().take(w as usize) {
-        let start = ((candle.open - range.0) / scaler * h) as u64;
-        let stop = ((candle.close - range.0) / scaler * h) as u64;
+    for (index_x, candle) in candles.iter().enumerate().take(w as usize) {
+        let open = (candle.open - range.0) / scaler * h;
+        let high = (candle.high - range.0) / scaler * h;
+        let low = (candle.low - range.0) / scaler * h;
+        let close = (candle.close - range.0) / scaler * h;
 
-        let diff = start.abs_diff(stop);
-        let range = if diff > 0 { (0..diff) } else { (0..1) };
+        let start_cell = low.floor() as u64;
+        let stop_cell = high.floor() as u64;
 
-        let color = if candle.open < candle.close { Color::Green } else { Color::Red };
+        let diff = start_cell.abs_diff(stop_cell + 1);
+        let color = if candle.open < candle.close { bull } else { bear };
 
-        for i in range.into_iter() {
-            let x = x_pos as u16;
+        for i in 0..diff {
+            let pos_x = index_x + x as usize;
+            let pos_y = (start_cell + i) as f64;
 
-            let mut y;
-            if candle.open > candle.close {
-                y = start - i;
-            } else {
-                y = start + i;
+            let o = open - pos_y;
+            let h = high - pos_y;
+            let l = low - pos_y;
+            let c = close - pos_y;
+
+            if let Some(ch) = candle_stick(o, h, l, c) {
+                let pixel = Pixel::new(pos_x as u16, pos_y as u16 + y as u16).char(ch).fg(color);
+                vec.push(pixel);
             }
-
-            y = h as u64 - y;
-
-            vec.push(Pixel::new(x, y as u16).fg(color).char('█'));
         }
     }
 
     vec
+}
+
+fn candle_stick(open: f64, high: f64, low: f64, close: f64) -> Option<char> {
+    let bar_low = f64::min(open, close);
+    let bar_high = f64::max(open, close);
+
+    let wick_low = f64::min(high, low);
+    let wick_high = f64::max(high, low);
+
+    if wick_high > 0.75 && wick_low < 0.25 && bar_high > 0.75 && bar_low < 0.25 {
+        return Some('┃');
+    }
+
+    if wick_high > 0.75 && wick_low < 0.25 && (bar_low > 0.75 || bar_high < 0.25) {
+        return Some('│');
+    }
+
+    if high < 0.75 && high > 0.25 && wick_low < 0.25 && bar_low < 0.25 {
+        return Some('╷');
+    }
+
+    if low < 0.75 && low > 0.25 && wick_low > 0.75 && bar_low > 0.75 {
+        return Some('╵');
+    }
+
+    if bar_high > 0.75 && bar_low > 0.25 && wick_low < 0.25 {
+        return Some('╿');
+    }
+
+    if bar_high < 0.75 && bar_low < 0.25 && wick_high > 0.75 {
+        return Some('╽');
+    }
+
+    if bar_high < 0.75 && bar_low > 0.25 {
+        return Some('╻');
+    }
+
+    if bar_high > 0.75 && bar_low < 0.25 {
+        return Some('╹');
+    }
+
+    None
 }
 
 fn order_book_row(val1: f64, val2: f64, width: f64, bar_width: f64, color1: Color, color2: Color) -> Row<'static> {

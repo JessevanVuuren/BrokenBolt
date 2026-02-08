@@ -44,20 +44,37 @@ impl Pixel {
 
 #[derive(Debug, Clone)]
 pub struct Pixels {
-    rect: Rect,
+    pub rect: Rect,
     bg: Color,
     fg: Color,
     pixels: Vec<Pixel>,
+    pub flip_x: bool,
+    pub flip_y: bool,
 }
 
 impl Pixels {
     pub fn new(rect: &Rect) -> Self {
         Self {
-            rect: *rect,
+            rect: Rect {
+                x: rect.x,
+                y: rect.y,
+                width: rect.width,
+                height: rect.height,
+            },
             bg: Color::Black,
             fg: Color::White,
             pixels: Vec::new(),
+            flip_x: false,
+            flip_y: false,
         }
+    }
+
+    pub fn height(&self) -> u16 {
+        self.rect.height
+    }
+
+    pub fn width(&self) -> u16 {
+        self.rect.width
     }
 
     pub fn bg(mut self, c: Color) -> Self {
@@ -86,7 +103,17 @@ impl Widget for Pixels {
         for p in &self.pixels {
             let style = Style::new().bg(p.bg.unwrap_or(self.bg)).fg(p.fg.unwrap_or(self.fg));
 
-            buf[(p.x, p.y)].set_char(p.char).set_style(style);
+            let mut pos = (p.x, p.y);
+
+            if (self.flip_x) {
+                pos.0 = self.rect.width - pos.0 + 1;
+            }
+
+            if (self.flip_y) {
+                pos.1 = self.rect.height - pos.1 + 1;
+            }
+
+            buf[pos].set_char(p.char).set_style(style);
         }
     }
 }

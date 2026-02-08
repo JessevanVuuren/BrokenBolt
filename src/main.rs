@@ -77,6 +77,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let mut orderbook = OrderBook::new("BTC/EUR").await.expect("Failed to init orderbook");
     let candles = Candle::new("BTC/EUR", 60, 0).await.expect("Failed to init candle");
+    
+    // candles.print_ohlc(10);
+    // panic!();
 
     let (event_tx, event_rx) = mpsc::channel::<State>();
 
