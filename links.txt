@@ -6,10 +6,6 @@ tokio: https://github.com/tokio-rs/tokio
 json to serde: https://transform.tools/json-to-rust-serde
 crc32fast checksum: https://github.com/srijs/rust-crc32fast/tree/master
 
-
-C:\Users\Telokis\AppData\Roaming\Code\User\workspaceStorage.
-
-
 line count -> find . | xargs wc -l
 
 Type	Bits	Min	                                                    Max
@@ -26,133 +22,13 @@ u32	    32	    0	                                                    4,294,967,2
 u64	    64	    0	                                                    18,446,744,073,709,551,615
 u128	128	    0	                                                    340,282,366,920,938,463,463,374,607,431,768,211,455
 
-https://theasciicode.com.ar/extended-ascii-code/block-graphic-character-ascii-code-219.html
-candle stick resolution
+UNICODE_VOID                 
+UNICODE_BODY                ┃
+UNICODE_HALF_BODY_BOTTOM    ╻
+UNICODE_HALF_BODY_TOP       ╹
+UNICODE_WICK                │
+UNICODE_TOP                 ╽
+UNICODE_BOTTOM              ╿
+UNICODE_UPPER_WICK          ╷
+UNICODE_LOWER_WICK          ╵
 
-
-- ■ █
-
-
-▁ ▂ ▃ ▄ ▅ ▆ ▇ █
-
-█	1.00
-▇	0.89
-▆	0.76
-▅	0.63
-▄	0.50
-▃	0.37
-▂	0.25
-▁	0.10
-
-    UNICODE_VOID                 
-    UNICODE_BODY                ┃
-    UNICODE_HALF_BODY_BOTTOM    ╻
-    UNICODE_HALF_BODY_TOP       ╹
-    UNICODE_WICK                │
-    UNICODE_TOP                 ╽
-    UNICODE_BOTTOM              ╿
-    UNICODE_UPPER_WICK          ╷
-    UNICODE_LOWER_WICK          ╵
-
-Pixel::new(10, 11).char()
-
-  
-Pixel::new(10, 11).char('┃');
-Pixel::new(10, 11).char('╻');
-Pixel::new(10, 11).char('╹');
-Pixel::new(10, 11).char('│');
-Pixel::new(10, 11).char('╽');
-Pixel::new(10, 11).char('╿');
-Pixel::new(10, 11).char('╷');
-Pixel::new(10, 11).char('╵');
-
-
-let mut test: Vec<Pixel> = vec![
-    Pixel::new(10, 10).char('▁'),
-    Pixel::new(11, 10).char('▂'),
-    Pixel::new(12, 10).char('▃'),
-    Pixel::new(13, 10).char('▄'),
-    Pixel::new(14, 10).char('▅'),
-    Pixel::new(15, 10).char('▆'),
-    Pixel::new(16, 10).char('▇'),
-    Pixel::new(17, 10).char('█'),
-    Pixel::new(10, 8).char('▁').bg(Color::White).fg(Color::Black),
-    Pixel::new(11, 8).char('▂').bg(Color::White).fg(Color::Black),
-    Pixel::new(12, 8).char('▃').bg(Color::White).fg(Color::Black),
-    Pixel::new(13, 8).char('▄').bg(Color::White).fg(Color::Black),
-    Pixel::new(14, 8).char('▅').bg(Color::White).fg(Color::Black),
-    Pixel::new(15, 8).char('▆').bg(Color::White).fg(Color::Black),
-    Pixel::new(16, 8).char('▇').bg(Color::White).fg(Color::Black),
-    Pixel::new(17, 8).char('█').bg(Color::White).fg(Color::Black),
-
-];
-
-
-fn candle_stick(top: f64, bottom: f64, top_wick: f64, bottom_wick: f64) -> char {
-
-    if top_wick > 0.75 && bottom_wick < 0.25 && top < 0.25 && bottom < 0.25 {
-        return '│'
-    }
-    
-    if top > 0.75 && bottom < 0.25 && top < 0.25 && bottom < 0.25 {
-        return '┃'
-    }
-
-    if top < 0.75 && bottom < 0.25 && top_wick < 0.75 {
-        return '╻'
-    }
-
-    if top < 0.75 && bottom < 0.25 && top_wick > 0.75 {
-        return '╽'
-    }
-
-    if top > 0.75 && bottom > 0.25 && bottom_wick > 0.75 {
-        return '╹'
-    }
-
-    if top > 0.75 && bottom > 0.25 && bottom_wick < 0.25 {
-        return '╿'
-    }
-
-    if top < 0.25 && top_wick < 0.75 {
-        return '╷'
-    }
-
-    if bottom > 0.75 && bottom_wick > 0.25 {
-        return '╵'
-    }
-
-    'x'
-}
-
-
-        // let color = if candle.open < candle.close { Color::Green } else { Color::Red };
-
-        // for i in 0..diff {
-        //     let x = x_pos as u16;
-
-        //     let mut y;
-        //     let mut char = 'x';
-        //     if candle.open > candle.close {
-        //         y = start_cell - i;
-        //         y = h as u64 - y;
-        //         vec.push(Pixel::new(x, y as u16).char(char));
-        //     } else {
-        //         y = start_cell + i;
-        //         y = h as u64 - y;
-        //         char = candle_fraction(stop - start_cell as f64);
-        //         vec.push(Pixel::new(x, y as u16).char(char).bg(Color::Blue));
-        //     }
-        // }
-
-
-63239.3, 63854.1, 63171.7, 63757.3
-64351.5, 64355.9, 63060.1, 63239.2
-64363.2, 64478.4, 64265.8, 64302.9
-64504.3, 64504.3, 63828.1, 64384.1
-64356.4, 64570.4, 64316.2, 64504.3
-64694,   64694,   64213.2, 64319.8
-64607.5, 64697.7, 64259.9, 64681.1
-64744.5, 64744.5, 64460,   64605.5
-64401.6, 64820.1, 64398.2, 64744.5
-64563.5, 64615.9, 64241.1, 64401.6
