@@ -17,25 +17,7 @@ use std::time::Duration;
 use std::{io, thread};
 use tokio_tungstenite::tungstenite::Message;
 
-use crate::handler::candle::Candle;
-use crate::handler::orderbook::{self, OrderBook};
-use crate::point::fetch::fetch_params;
-use crate::socket::socket::Incoming;
-use crate::socket::{channels::Channel, socket::Socket};
-use crate::types::points::AssetPairs;
-use crate::types::types::{OrderBookData, OrderBookType, TickerType};
-use crate::ui::app::App;
-use crate::ui::ui::ui;
-use crate::urls::WEBSOCKET_URL;
-
-mod error;
-mod handler;
-mod point;
-mod socket;
-mod types;
-mod ui;
-mod urls;
-mod utils;
+use broken_bolt::{App, Candle, Channel, Incoming, OrderBook, OrderBookType, Socket, TickerType, WEBSOCKET_URL, ui};
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App, event: Receiver<State>) -> io::Result<bool> {
     loop {

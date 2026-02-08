@@ -5,6 +5,7 @@ http: https://github.com/seanmonstar/reqwest
 tokio: https://github.com/tokio-rs/tokio
 json to serde: https://transform.tools/json-to-rust-serde
 crc32fast checksum: https://github.com/srijs/rust-crc32fast/tree/master
+nested: https://crates.io/crates/nestify/
 
 line count -> find . | xargs wc -l
 

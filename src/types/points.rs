@@ -1,3 +1,4 @@
+use nestify::nest;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -43,4 +44,16 @@ pub struct AssetPairs {
     pub long_position_limit: i64,
     #[serde(rename = "short_position_limit")]
     pub short_position_limit: i64,
+}
+
+nest! {
+    #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]*
+    #[serde(rename_all = "camelCase")]*
+    pub struct ServerTime {
+        pub error: Vec<String>,
+        pub result: pub struct Result {
+            pub unixtime: i64,
+            pub rfc1123: String,
+        },
+    }
 }

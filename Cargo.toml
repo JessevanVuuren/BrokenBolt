@@ -24,6 +24,15 @@ crc32fast = "1.5.0"
 ratatui = "0.30.0"
 crossterm = "0.29.0"
 chrono = "0.4.43"
+nestify = "0.3.3"
 
 [lints.rust]
 unused = "allow"
+
+[[bin]]
+name = "tui"
+path = "src/bin/tui.rs"
+
+[[bin]]
+name = "test"
+path = "src/bin/test-stuff.rs"
