@@ -53,8 +53,9 @@ pub fn get_kraken_signature<T: serde::Serialize>(path: &str, payload: &T, privat
 pub async fn get_websocket_token(client: &Client, public_key: &str, private_key: &str) -> Result<WebSocketKey, GetWebSocketError> {
     let nonce = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis();
 
-    #[rustfmt::skip]
-    let body = Nonce { nonce: nonce.to_string() };
+    let body = Nonce {
+        nonce: nonce.to_string(),
+    };
 
     let signature = get_kraken_signature(WEBSOCKET_TOKEN, &body, &private_key, nonce)?;
 

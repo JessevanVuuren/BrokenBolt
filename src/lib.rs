@@ -1,13 +1,14 @@
 pub use crate::handler::candle::Candle;
 pub use crate::handler::orderbook::{self, OrderBook};
-pub use crate::point::fetch::fetch_params;
+pub use crate::point::fetch::{fetch_params, fetch_auth};
 pub use crate::socket::socket::Incoming;
 pub use crate::socket::{channels::Channel, socket::Socket};
 pub use crate::types::points::*;
-pub use crate::types::types::{OrderBookData, OrderBookType, TickerType};
+pub use crate::types::types::{OrderBookData, OrderBookType, TickerType, Nonce};
 pub use crate::ui::app::App;
 pub use crate::ui::ui::ui;
 pub use crate::urls::*;
+pub use crate::auth::token::*;
 
 mod error;
 mod handler;
@@ -17,3 +18,4 @@ mod types;
 mod ui;
 mod urls;
 mod utils;
+mod auth;

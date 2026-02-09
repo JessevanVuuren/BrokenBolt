@@ -55,16 +55,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut web = Socket::new(vec![orderbook_channel]);
 
     web.start(WEBSOCKET_URL).await.expect("Error socket {}");
-    // web.subscribe_to_channels(false).await;
+    web.subscribe_to_channels(false).await;
 
     let mut orderbook = OrderBook::new("BTC/EUR").await.expect("Failed to init orderbook");
     let candles = Candle::new("BTC/EUR", 60, 0).await.expect("Failed to init candle");
-    
-    // candles.print_ohlc(10);
-    // panic!();
 
     let (event_tx, event_rx) = mpsc::channel::<State>();
-
     let mut app = App::new(orderbook.clone(), candles.clone());
 
     let update_key = event_tx.clone();
