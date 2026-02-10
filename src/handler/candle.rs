@@ -3,14 +3,7 @@ use std::num::ParseFloatError;
 use serde_json::Value;
 
 use crate::{
-    error::error::AssetPairError,
-    point::{
-        asset_pair::get_asset_pair,
-        fetch::{FetchError, fetch_params},
-    },
-    types::{candle::CandleStick, points::AssetPairs},
-    urls::{ASSET_PAIRS_URL, OHLC_URL},
-    utils::{NestedParseError, epoch_to_string, nested_object},
+    Kraken, point::{error::FetchError, types::AssetPairs}, types::candle::CandleStick, urls::{ASSET_PAIRS_URL, OHLC_URL}, utils::{NestedParseError, epoch_to_string, nested_object}
 };
 
 #[derive(Debug, Clone)]
@@ -24,32 +17,16 @@ type RawCandleStick = (u64, String, String, String, String, String, String, i64)
 #[derive(Debug, thiserror::Error)]
 pub enum InitCandleError {
     #[error(transparent)]
-    FetchPair(#[from] AssetPairError),
-
-    #[error(transparent)]
     FetchCandle(#[from] FetchError),
-
-    #[error(transparent)]
-    ParseJson(#[from] NestedParseError),
 
     #[error(transparent)]
     ParseFloat(#[from] ParseFloatError),
 }
 
 impl Candle {
-    pub async fn new(pair: &str, interval: i64, since: i32) -> Result<Self, InitCandleError> {
-        let asset_pair = get_asset_pair(pair).await?;
-
-        let params = vec![
-            ("pair", pair.to_owned()),
-            ("interval", interval.to_string()),
-            ("since", since.to_string()),
-        ];
-
-        let mut data: Value = fetch_params(OHLC_URL, params).await?;
-        let path = format!("/result/{}", pair.replace('/', "~1"));
-        let raw_sticks: Vec<RawCandleStick> = nested_object(&path, &mut data)?;
-
+    pub async fn new(kraken: &Kraken, pair: &str, interval: i64, since: i32) -> Result<Self, InitCandleError> {
+        let asset_pair = kraken.get_asset_pair(pair).await?;
+        let raw_sticks = kraken.get_ohlc(pair, &interval.to_string(), &since.to_string()).await?;
         let candles = Self::build_candle_sticks(raw_sticks, pair, interval)?;
 
         Ok(Self {

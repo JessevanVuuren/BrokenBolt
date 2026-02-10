@@ -1,3 +1,4 @@
+use core::panic::PanicMessage;
 use crossterm::event::{Event, KeyEvent, read};
 use crossterm::event::{KeyCode, KeyEventKind};
 use ratatui::Terminal;
@@ -7,7 +8,6 @@ use ratatui::crossterm::execute;
 use ratatui::crossterm::terminal::{EnterAlternateScreen, enable_raw_mode};
 use ratatui::crossterm::terminal::{LeaveAlternateScreen, disable_raw_mode};
 use ratatui::prelude::{Backend, CrosstermBackend};
-use core::panic::PanicMessage;
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::process::exit;
@@ -17,7 +17,7 @@ use std::time::Duration;
 use std::{io, thread};
 use tokio_tungstenite::tungstenite::Message;
 
-use broken_bolt::{App, Candle, Channel, Incoming, OrderBook, OrderBookType, Socket, TickerType, WEBSOCKET_URL, ui};
+use broken_bolt::{App, Candle, Channel, Incoming, Kraken, OrderBook, OrderBookType, Socket, TickerType, WEBSOCKET_URL, ui};
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App, event: Receiver<State>) -> io::Result<bool> {
     loop {
@@ -57,8 +57,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     web.start(WEBSOCKET_URL).await.expect("Error socket {}");
     web.subscribe_to_channels(false).await;
 
-    let mut orderbook = OrderBook::new("BTC/EUR").await.expect("Failed to init orderbook");
-    let candles = Candle::new("BTC/EUR", 60, 0).await.expect("Failed to init candle");
+    let mut kraken = Kraken::from_env()?;
+
+    let mut orderbook = OrderBook::new(&kraken, "BTC/EUR").await.expect("Failed to init orderbook");
+    let candles = Candle::new(&kraken, "BTC/EUR", 60, 0).await.expect("Failed to init candle");
 
     let (event_tx, event_rx) = mpsc::channel::<State>();
     let mut app = App::new(orderbook.clone(), candles.clone());

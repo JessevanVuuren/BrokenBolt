@@ -6,7 +6,6 @@ use crate::{
         orderbook::{self, OrderBook},
     },
     types::{
-        points::AssetPairs,
         types::{OrderBookData, OrderBookType},
     },
     utils::{decode_fixed, encode_fixed},

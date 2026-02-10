@@ -3,15 +3,9 @@ use std::{cmp::Reverse, collections::BTreeMap, fmt::format, ops::Index, process:
 use serde_json::Value;
 
 use crate::{
-    error::error::AssetPairError,
-    point::{
-        asset_pair::get_asset_pair,
-        fetch::{FetchError, fetch_params},
-    },
-    types::{
-        points::AssetPairs,
-        types::{OrderBookData, OrderBookType},
-    },
+    Kraken,
+    point::{error::FetchError, types::AssetPairs},
+    types::types::{OrderBookData, OrderBookType},
     urls::ASSET_PAIRS_URL,
     utils::{NestedParseError, decode_fixed, encode_fixed, nested_object},
 };
@@ -24,8 +18,8 @@ pub struct OrderBook {
 }
 
 impl OrderBook {
-    pub async fn new(pair: &str) -> Result<Self, AssetPairError> {
-        let asset_pair = get_asset_pair(pair).await?;
+    pub async fn new(kraken: &Kraken, pair: &str) -> Result<Self, FetchError> {
+        let asset_pair = kraken.get_asset_pair(pair).await?;
 
         Ok(Self {
             asset_pair,
