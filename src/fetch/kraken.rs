@@ -1,0 +1,170 @@
+use std::{
+    collections::HashMap,
+    env,
+    time::{SystemTime, UNIX_EPOCH},
+};
+
+use dotenv::dotenv;
+use reqwest::{Client, header::HeaderMap};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use serde_json::{Value, json};
+use thiserror::Error;
+use url::{ParseError, Url};
+
+use crate::{
+    CreateSignError,
+    fetch::{
+        error::{AuthFetchError, FetchError, KrakenEnvError, NestedParseError},
+        types::{AssetPairs, Balance, BalanceEx, BalanceTrade, KraRre, RawCandleStick, ServerTime},
+        urls::{ASSET_PAIRS_URL, BALANCE_EX_URL, BALANCE_TRADE_URL, BALANCE_URL, BASE_URL, OHLC_URL, SERVER_TIME_URL},
+        utils::BalanceType,
+    },
+    get_kraken_signature,
+};
+
+pub struct Kraken {
+    public_key: String,
+    private_key: String,
+    client: Client,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct AuthBody<T> {
+    nonce: u128,
+    #[serde(flatten)]
+    body: T,
+}
+
+impl Kraken {
+    pub fn from_env() -> Result<Self, KrakenEnvError> {
+        dotenv().ok();
+
+        let public_key = std::env::var("PUBLIC_KEY").map_err(|_| KrakenEnvError::EnvError("PUBLIC_KEY".to_string()))?;
+        let private_key = std::env::var("PRIVATE_KEY").map_err(|_| KrakenEnvError::EnvError("PRIVATE_KEY".to_string()))?;
+
+        Ok(Self {
+            public_key,
+            private_key,
+            client: Client::new(),
+        })
+    }
+
+    pub fn new(public_key: &str, private_key: &str) -> Self {
+        Self {
+            public_key: public_key.into(),
+            private_key: private_key.into(),
+            client: Client::new(),
+        }
+    }
+
+    pub fn nested<T: DeserializeOwned>(path: &str, json: &mut Value) -> Result<T, NestedParseError> {
+        let value = json.pointer_mut(path).ok_or(NestedParseError::MissingField(path.to_string()))?;
+        let asset: T = serde_json::from_value(value.take())?;
+        Ok(asset)
+    }
+
+    fn get_nonce() -> u128 {
+        SystemTime::now().duration_since(UNIX_EPOCH).expect("Unable to get time").as_millis()
+    }
+
+    fn build_url(end_point: &str) -> Result<Url, ParseError> {
+        let url = format!("{}{}", BASE_URL, end_point);
+        return Url::parse(&url);
+    }
+
+    fn auth_headers<T: Serialize>(&self, url: &str, body: &AuthBody<T>) -> Result<HeaderMap, CreateSignError> {
+        let sign = get_kraken_signature(url, body, &self.private_key, body.nonce)?;
+
+        let mut headers: HeaderMap = HeaderMap::new();
+        headers.insert("API-Key", self.public_key.parse().unwrap());
+        headers.insert("API-Sign", sign.parse().unwrap());
+
+        Ok(headers)
+    }
+
+    fn body_to_auth<T: Serialize>(body: T) -> AuthBody<T> {
+        AuthBody {
+            nonce: Self::get_nonce(),
+            body,
+        }
+    }
+
+    pub async fn get_server_time(&self) -> Result<ServerTime, FetchError> {
+        let res: ServerTime = Client::new().post(SERVER_TIME_URL).send().await?.json().await?;
+        Ok(res)
+    }
+
+    pub async fn get_asset_pair(&self, pair: &str) -> Result<AssetPairs, FetchError> {
+        let params = vec![("pair", pair.to_owned())];
+        let url = Url::parse_with_params(ASSET_PAIRS_URL, params)?;
+
+        let mut res: Value = self.client.post(url).send().await?.json().await?;
+
+        let path = format!("/result/{}", pair.replace('/', "~1"));
+        let assets: AssetPairs = Self::nested(&path, &mut res)?;
+
+        Ok(assets)
+    }
+
+    pub async fn get_ohlc(&self, pair: &str, interval: &str, since: &str) -> Result<Vec<RawCandleStick>, FetchError> {
+        let params = vec![
+            ("pair", pair.to_owned()),
+            ("interval", interval.to_string()),
+            ("since", since.to_string()),
+        ];
+
+        let url = Url::parse_with_params(OHLC_URL, params)?;
+        let mut res: Value = self.client.post(url).send().await?.json().await?;
+        let path = format!("/result/{}", pair.replace('/', "~1"));
+        let raw_sticks: Vec<RawCandleStick> = Self::nested(&path, &mut res)?;
+
+        Ok(raw_sticks)
+    }
+
+    pub async fn get_balance(&self, multiplier: BalanceType) -> Result<KraRre<Balance>, AuthFetchError> {
+        let extra = ("rebase_multiplier", multiplier.to_string());
+        let body = Self::body_to_auth(HashMap::from([extra]));
+
+        let url = Self::build_url(BALANCE_URL)?;
+        let headers = self.auth_headers(BALANCE_URL, &body)?;
+
+        let mut res: KraRre<Value> = Client::new().post(url).headers(headers).json(&body).send().await?.json().await?;
+        let assets: String = Self::nested(&"/ZEUR", &mut res.result)?;
+
+        Ok(KraRre {
+            error: res.error,
+            result: Balance {
+                balance: assets,
+            },
+        })
+    }
+
+    pub async fn get_balance_ex(&self, multiplier: BalanceType) -> Result<KraRre<BalanceEx>, AuthFetchError> {
+        let extra = ("rebase_multiplier", multiplier.to_string());
+        let body = Self::body_to_auth(HashMap::from([extra]));
+
+        let url = Self::build_url(BALANCE_EX_URL)?;
+        let headers = self.auth_headers(BALANCE_EX_URL, &body)?;
+
+        let mut res: KraRre<Value> = Client::new().post(url).headers(headers).json(&body).send().await?.json().await?;
+
+        let assets: BalanceEx = Self::nested(&"/ZEUR", &mut res.result)?;
+
+        Ok(KraRre {
+            error: res.error,
+            result: assets,
+        })
+    }
+
+    pub async fn get_balance_trade(&self, multiplier: BalanceType, asset: &str) -> Result<KraRre<BalanceTrade>, AuthFetchError> {
+        let extra = [("rebase_multiplier", multiplier.to_string()), ("asset", asset.to_string())];
+        let body = Self::body_to_auth(HashMap::from(extra));
+
+        let url = Self::build_url(BALANCE_TRADE_URL)?;
+        let headers = self.auth_headers(BALANCE_TRADE_URL, &body)?;
+
+        let mut res: KraRre<BalanceTrade> = Client::new().post(url).headers(headers).json(&body).send().await?.json().await?;
+
+        Ok(res)
+    }
+}

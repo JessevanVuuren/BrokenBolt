@@ -3,7 +3,7 @@ use std::num::ParseFloatError;
 use serde_json::Value;
 
 use crate::{
-    Kraken, point::{error::FetchError, types::AssetPairs}, types::candle::CandleStick, urls::{ASSET_PAIRS_URL, OHLC_URL}, utils::{NestedParseError, epoch_to_string, nested_object}
+    Kraken, fetch::{error::FetchError, types::AssetPairs}, types::candle::CandleStick, utils::{NestedParseError, epoch_to_string, nested_object}
 };
 
 #[derive(Debug, Clone)]

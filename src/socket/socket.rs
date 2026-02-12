@@ -19,6 +19,8 @@ use tokio_tungstenite::{
 
 use crate::socket::channels::{self, Channel};
 
+pub const WEBSOCKET_URL: &str = "wss://ws.kraken.com/v2";
+
 pub struct Socket {
     channels: Vec<Channel>,
     read: Option<JoinHandle<()>>,
@@ -50,8 +52,8 @@ impl Socket {
         }
     }
 
-    pub async fn start(&mut self, url: &'static str) -> Result<(), Error> {
-        let (stream, response) = connect_async(url).await?;
+    pub async fn start(&mut self) -> Result<(), Error> {
+        let (stream, response) = connect_async(WEBSOCKET_URL).await?;
 
         let (write, mut read) = stream.split();
         let (send_err, recv_err) = mpsc::unbounded_channel();

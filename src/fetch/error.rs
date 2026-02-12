@@ -1,8 +1,8 @@
 use thiserror::Error;
-use url::ParseError;
+
+use crate::CreateSignError;
 
 #[derive(Debug, Error)]
-#[error(transparent)]
 pub enum FetchError {
     #[error(transparent)]
     ParsePayload(#[from] serde_urlencoded::ser::Error),
@@ -11,7 +11,25 @@ pub enum FetchError {
     GetHttpRequest(#[from] reqwest::Error),
 
     #[error(transparent)]
-    ParseUrl(#[from] ParseError),
+    ParseUrl(#[from] url::ParseError),
+
+    #[error(transparent)]
+    Parse(#[from] NestedParseError),
+}
+
+#[derive(Debug, Error)]
+pub enum AuthFetchError {
+    #[error(transparent)]
+    ParsePayload(#[from] serde_urlencoded::ser::Error),
+
+    #[error(transparent)]
+    GetHttpRequest(#[from] reqwest::Error),
+
+    #[error(transparent)]
+    ParseUrl(#[from] url::ParseError),
+
+    #[error(transparent)]
+    Auth(#[from] CreateSignError),
 
     #[error(transparent)]
     Parse(#[from] NestedParseError),

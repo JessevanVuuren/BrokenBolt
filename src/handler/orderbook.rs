@@ -4,9 +4,8 @@ use serde_json::Value;
 
 use crate::{
     Kraken,
-    point::{error::FetchError, types::AssetPairs},
+    fetch::{error::FetchError, types::AssetPairs},
     types::types::{OrderBookData, OrderBookType},
-    urls::ASSET_PAIRS_URL,
     utils::{NestedParseError, decode_fixed, encode_fixed, nested_object},
 };
 
