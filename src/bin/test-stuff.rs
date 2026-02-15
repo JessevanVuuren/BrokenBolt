@@ -4,7 +4,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use broken_bolt::{BalanceType, Kraken};
+use broken_bolt::{BalanceType, Kraken, TradeHistoryBody, pp_json};
 use dotenv::dotenv;
 use reqwest::{Client, header::HeaderMap};
 use serde_json::Value;
@@ -18,9 +18,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // let res = kraken.get_asset_pair("BTC/EUR").await?;
 
-    let res = kraken.get_balance_trade(BalanceType::Base, "EUR").await?;
+    // let res = kraken.get_balance_trade(BalanceType::Base, "EUR").await?;
 
+    let res = kraken.get_trades_history(&TradeHistoryBody::default()).await?;
+
+    
     println!("{:#?}", res);
+    pp_json(&res);
 
     Ok(())
 }

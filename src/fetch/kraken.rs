@@ -12,12 +12,12 @@ use thiserror::Error;
 use url::{ParseError, Url};
 
 use crate::{
-    CreateSignError,
+    BalanceType, CreateSignError,
     fetch::{
+        body::TradeHistoryBody,
         error::{AuthFetchError, FetchError, KrakenEnvError, NestedParseError},
         types::{AssetPairs, Balance, BalanceEx, BalanceTrade, KraRre, RawCandleStick, ServerTime},
-        urls::{ASSET_PAIRS_URL, BALANCE_EX_URL, BALANCE_TRADE_URL, BALANCE_URL, BASE_URL, OHLC_URL, SERVER_TIME_URL},
-        utils::BalanceType,
+        urls::{ASSET_PAIRS_URL, BALANCE_EX_URL, BALANCE_TRADE_URL, BALANCE_URL, BASE_URL, OHLC_URL, SERVER_TIME_URL, TRADES_HISTORY_URL},
     },
     get_kraken_signature,
 };
@@ -129,7 +129,7 @@ impl Kraken {
         let headers = self.auth_headers(BALANCE_URL, &body)?;
 
         let mut res: KraRre<Value> = Client::new().post(url).headers(headers).json(&body).send().await?.json().await?;
-        let assets: String = Self::nested(&"/ZEUR", &mut res.result)?;
+        let assets: f64 = Self::nested(&"/ZEUR", &mut res.result)?;
 
         Ok(KraRre {
             error: res.error,
@@ -164,6 +164,17 @@ impl Kraken {
         let headers = self.auth_headers(BALANCE_TRADE_URL, &body)?;
 
         let mut res: KraRre<BalanceTrade> = Client::new().post(url).headers(headers).json(&body).send().await?.json().await?;
+
+        Ok(res)
+    }
+
+    pub async fn get_trades_history(&self, params: &TradeHistoryBody) -> Result<KraRre<Value>, AuthFetchError> {
+        let body = Self::body_to_auth(params);
+
+        let url = Self::build_url(TRADES_HISTORY_URL)?;
+        let headers = self.auth_headers(TRADES_HISTORY_URL, &body)?;
+
+        let mut res: KraRre<Value> = Client::new().post(url).headers(headers).json(&body).send().await?.json().await?;
 
         Ok(res)
     }

@@ -1,5 +1,6 @@
 use chrono::Utc;
 use chrono::prelude::DateTime;
+use serde::{Deserialize, Serialize};
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 use serde_json_fmt::JsonSyntaxError;
@@ -38,4 +39,8 @@ pub fn epoch_to_string(time: u64) -> String {
     let datetime = DateTime::<Utc>::from(d);
 
     datetime.to_rfc3339()
+}
+
+pub fn pp_json<T: Serialize>(body: &T) {
+    println!("{}", serde_json::to_string_pretty(&body).unwrap());
 }

@@ -1,5 +1,8 @@
+use core::fmt;
+
 use nestify::nest;
-use serde::{Deserialize, Serialize};
+use serde::de::value::StrDeserializer;
+use serde::{Deserialize, Deserializer, Serialize, de};
 use serde_json::Value;
 
 pub type RawCandleStick = (u64, String, String, String, String, String, String, i64);
@@ -65,31 +68,49 @@ pub struct ServerTime {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Balance {
-    pub balance: String,
+    #[serde(deserialize_with = "str_to_f64")]
+    pub balance: f64,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BalanceEx {
-    pub balance: Option<String>,
-    pub credit: Option<String>,
-    #[serde(rename = "credit_used")]
-    pub credit_used: Option<String>,
-    #[serde(rename = "hold_trade")]
-    pub hold_trade: Option<String>,
+    #[serde(deserialize_with = "str_to_f64")]
+    pub balance: f64,
+    #[serde(deserialize_with = "str_to_f64")]
+    pub credit: f64,
+    #[serde(deserialize_with = "str_to_f64")]
+    pub credit_used: f64,
+    #[serde(deserialize_with = "str_to_f64")]
+    pub hold_trade: f64,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BalanceTrade {
-    pub eb: Option<String>,
-    pub tb: Option<String>,
-    pub m: Option<String>,
-    pub uv: Option<String>,
-    pub n: Option<String>,
-    pub c: Option<String>,
-    pub v: Option<String>,
-    pub e: Option<String>,
-    pub mf: Option<String>,
-    pub mfo: Option<String>,
+    #[serde(deserialize_with = "str_to_f64")]
+    pub eb: f64,
+    #[serde(deserialize_with = "str_to_f64")]
+    pub tb: f64,
+    #[serde(deserialize_with = "str_to_f64")]
+    pub m: f64,
+    #[serde(deserialize_with = "str_to_f64")]
+    pub uv: f64,
+    #[serde(deserialize_with = "str_to_f64")]
+    pub n: f64,
+    #[serde(deserialize_with = "str_to_f64")]
+    pub c: f64,
+    #[serde(deserialize_with = "str_to_f64")]
+    pub v: f64,
+    #[serde(deserialize_with = "str_to_f64")]
+    pub e: f64,
+    #[serde(deserialize_with = "str_to_f64")]
+    pub mf: f64,
+    #[serde(deserialize_with = "str_to_f64")]
+    pub mfo: f64,
+}
+
+fn str_to_f64<'de, D: Deserializer<'de>>(ty: D) -> Result<f64, D::Error> {
+    let str_num: &str = de::Deserialize::deserialize(ty)?;
+    serde_json::from_str(str_num).map_err(de::Error::custom)
 }
