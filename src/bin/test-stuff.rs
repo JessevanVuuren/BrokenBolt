@@ -23,8 +23,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let res = kraken.get_trades_history(&TradeHistoryBody::default()).await?;
 
     
-    println!("{:#?}", res);
-    pp_json(&res);
+    // println!("{:#?}", res);
+    // pp_json(&res);
 
     Ok(())
 }

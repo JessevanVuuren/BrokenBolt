@@ -5,6 +5,8 @@ use serde::de::value::StrDeserializer;
 use serde::{Deserialize, Deserializer, Serialize, de};
 use serde_json::Value;
 
+use crate::fetch::utils::str_to_f64;
+
 pub type RawCandleStick = (u64, String, String, String, String, String, String, i64);
 
 // kraken response
@@ -110,7 +112,36 @@ pub struct BalanceTrade {
     pub mfo: f64,
 }
 
-fn str_to_f64<'de, D: Deserializer<'de>>(ty: D) -> Result<f64, D::Error> {
-    let str_num: &str = de::Deserialize::deserialize(ty)?;
-    serde_json::from_str(str_num).map_err(de::Error::custom)
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Trade {
+    pub id: String,
+    #[serde(rename = "ordertxid")]
+    pub order_txid: String,
+    #[serde(rename = "postxid")]
+    pub post_xid: String,
+    pub pair: String,
+    pub aclass: String,
+    pub time: f64,
+    #[serde(rename = "type")]
+    pub type_field: String,
+    pub ordertype: String,
+    #[serde(rename = "tradeordertype")]
+    pub trade_ordertype: String,
+    #[serde(deserialize_with = "str_to_f64")]
+    pub price: f64,
+    #[serde(deserialize_with = "str_to_f64")]
+    pub cost: f64,
+    #[serde(deserialize_with = "str_to_f64")]
+    pub fee: f64,
+    #[serde(deserialize_with = "str_to_f64")]
+    pub vol: f64,
+    #[serde(deserialize_with = "str_to_f64")]
+    pub margin: f64,
+    #[serde(deserialize_with = "str_to_f64")]
+    pub leverage: f64,
+    pub misc: String,
+    #[serde(rename = "trade_id")]
+    pub trade_id: i64,
+    pub maker: bool,
 }

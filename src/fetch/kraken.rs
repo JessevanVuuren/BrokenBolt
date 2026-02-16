@@ -1,12 +1,16 @@
 use std::{
     collections::HashMap,
     env,
+    os::raw,
     time::{SystemTime, UNIX_EPOCH},
 };
 
 use dotenv::dotenv;
 use reqwest::{Client, header::HeaderMap};
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use serde::{
+    Deserialize, Serialize,
+    de::{DeserializeOwned, Error},
+};
 use serde_json::{Value, json};
 use thiserror::Error;
 use url::{ParseError, Url};
@@ -16,10 +20,10 @@ use crate::{
     fetch::{
         body::TradeHistoryBody,
         error::{AuthFetchError, FetchError, KrakenEnvError, NestedParseError},
-        types::{AssetPairs, Balance, BalanceEx, BalanceTrade, KraRre, RawCandleStick, ServerTime},
+        types::{AssetPairs, Balance, BalanceEx, BalanceTrade, KraRre, RawCandleStick, ServerTime, Trade},
         urls::{ASSET_PAIRS_URL, BALANCE_EX_URL, BALANCE_TRADE_URL, BALANCE_URL, BASE_URL, OHLC_URL, SERVER_TIME_URL, TRADES_HISTORY_URL},
     },
-    get_kraken_signature,
+    get_kraken_signature, pp_json,
 };
 
 pub struct Kraken {
@@ -168,14 +172,25 @@ impl Kraken {
         Ok(res)
     }
 
-    pub async fn get_trades_history(&self, params: &TradeHistoryBody) -> Result<KraRre<Value>, AuthFetchError> {
+    pub async fn get_trades_history(&self, params: &TradeHistoryBody) -> Result<Vec<Trade>, AuthFetchError> {
         let body = Self::body_to_auth(params);
 
         let url = Self::build_url(TRADES_HISTORY_URL)?;
         let headers = self.auth_headers(TRADES_HISTORY_URL, &body)?;
 
         let mut res: KraRre<Value> = Client::new().post(url).headers(headers).json(&body).send().await?.json().await?;
+        let mut raw_trades: Value = Self::nested(&"/trades", &mut res.result)?;
 
-        Ok(res)
+        let mut obj_trades = raw_trades.as_object_mut().ok_or(serde_json::Error::custom("Unable to parse trades"))?;
+
+        let trades = obj_trades
+            .iter_mut()
+            .map(|(key, value)| {
+                value["id"] = json!(key);
+                serde_json::from_value(value.take())
+            })
+            .collect::<Result<Vec<Trade>, _>>()?;
+
+        Ok(trades)
     }
 }

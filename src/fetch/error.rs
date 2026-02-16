@@ -26,13 +26,16 @@ pub enum AuthFetchError {
     GetHttpRequest(#[from] reqwest::Error),
 
     #[error(transparent)]
+    ParseJson(#[from] serde_json::Error),
+
+    #[error(transparent)]
     ParseUrl(#[from] url::ParseError),
+    
+    #[error(transparent)]
+    Parse(#[from] NestedParseError),
 
     #[error(transparent)]
     Auth(#[from] CreateSignError),
-
-    #[error(transparent)]
-    Parse(#[from] NestedParseError),
 }
 
 #[derive(Debug, Error)]
