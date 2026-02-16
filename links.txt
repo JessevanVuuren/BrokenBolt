@@ -7,6 +7,11 @@ json to serde: https://transform.tools/json-to-rust-serde
 crc32fast checksum: https://github.com/srijs/rust-crc32fast/tree/master
 nested: https://crates.io/crates/nestify/
 
+
+// goeie shit
+
+strum: https://github.com/peternator7/strum
+
 line count -> find . | xargs wc -l
 
 Type	Bits	Min	                                                    Max

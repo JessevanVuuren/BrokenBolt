@@ -17,7 +17,7 @@ use std::time::Duration;
 use std::{io, thread};
 use tokio_tungstenite::tungstenite::Message;
 
-use broken_bolt::{App, Candle, Channel, Incoming, Kraken, OrderBook, OrderBookType, Socket, TickerType, ui};
+use broken_bolt::{App, Candle, Ch, Channel, Incoming, Kraken, OrderBook, OrderBookType, Socket, TickerType, ui};
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App, event: Receiver<State>) -> io::Result<bool> {
     loop {
@@ -51,7 +51,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // ^ ui stuff
 
-    let orderbook_channel = Channel::new("book", vec!["BTC/EUR"]);
+    let orderbook_channel = Channel::new(Ch::BOOK, vec!["BTC/EUR"], None);
     let mut web = Socket::new(vec![orderbook_channel]);
 
     web.start().await.expect("Error socket {}");
