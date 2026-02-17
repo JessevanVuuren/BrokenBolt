@@ -60,7 +60,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut kraken = Kraken::from_env()?;
 
     let mut orderbook = OrderBook::new(&kraken, "BTC/EUR").await.expect("Failed to init orderbook");
-    let candles = Candle::new(&kraken, "BTC/EUR", 60, 0).await.expect("Failed to init candle");
+    let candles = Candle::new(&kraken, "BTC/EUR", 60).await.expect("Failed to init candle");
 
     let (event_tx, event_rx) = mpsc::channel::<State>();
     let mut app = App::new(orderbook.clone(), candles.clone());
@@ -108,6 +108,7 @@ async fn incoming(msg: Incoming, soc: &mut Socket, orderbook: &mut OrderBook, up
     }
 
     if msg.channel == "book" {
+        // TODO: rewrite this to use pub struct KraSoc<T> {
         let ob_data: OrderBookType = serde_json::from_str(&msg.message.to_string()).unwrap();
         update_ui.send(State::OrderBook(ob_data.clone()));
         orderbook.stream(ob_data);

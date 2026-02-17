@@ -3,11 +3,12 @@ use std::num::ParseFloatError;
 use serde_json::Value;
 
 use crate::{
-    Kraken, fetch::{error::FetchError, types::AssetPairs}, types::candle::CandleStick, utils::{NestedParseError, epoch_to_string, nested_object}
+    Kraken, fetch::{error::FetchError, types::AssetPairs}, pp_json, types::{candle::CandleStick, types::OhlcData}, utils::{NestedParseError, epoch_to_string, nested_object}
 };
 
 #[derive(Debug, Clone)]
 pub struct Candle {
+    interval: i64,
     asset_pair: AssetPairs,
     pub candles: Vec<CandleStick>,
 }
@@ -24,12 +25,13 @@ pub enum InitCandleError {
 }
 
 impl Candle {
-    pub async fn new(kraken: &Kraken, pair: &str, interval: i64, since: i32) -> Result<Self, InitCandleError> {
+    pub async fn new(kraken: &Kraken, pair: &str, interval: i64) -> Result<Self, InitCandleError> {
         let asset_pair = kraken.get_asset_pair(pair).await?;
-        let raw_sticks = kraken.get_ohlc(pair, &interval.to_string(), &since.to_string()).await?;
+        let raw_sticks = kraken.get_ohlc(pair, &interval.to_string(), "0").await?;
         let candles = Self::build_candle_sticks(raw_sticks, pair, interval)?;
 
         Ok(Self {
+            interval,
             asset_pair,
             candles,
         })
@@ -66,6 +68,20 @@ impl Candle {
             self.candles[index].low,
             self.candles[index].close,
         ]
+    }
+
+    pub fn web_stream(&self, data: Vec<OhlcData>) {
+        if (data[0].interval != self.interval) {
+            panic!("Interval does not match fetch: {}, socket: {}", self.interval, data[0].interval)
+        }
+
+        if (data.len() > 1) {
+            panic!("To many updates in OHLC candles")
+        }
+
+    
+        println!("begin fetch : {}", self.candles[0].interval_begin);
+        println!("begin socket: {}", data[0].interval_begin);
     }
 
     pub fn min_max(&self, mut depth: usize) -> (f64, f64) {

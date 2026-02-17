@@ -76,6 +76,11 @@ impl Kraken {
         return Url::parse(&url);
     }
 
+    fn build_params_url(end_point: &str, params: Vec<(&str, &str)>) -> Result<Url, ParseError> {
+        let url = format!("{}{}", BASE_URL, end_point);
+        return Url::parse_with_params(&url, params);
+    }
+
     fn auth_headers<T: Serialize>(&self, url: &str, body: &AuthBody<T>) -> Result<HeaderMap, CreateSignError> {
         let sign = get_kraken_signature(url, body, &self.private_key, body.nonce)?;
 
@@ -99,28 +104,23 @@ impl Kraken {
     }
 
     pub async fn get_asset_pair(&self, pair: &str) -> Result<AssetPairs, FetchError> {
-        let params = vec![("pair", pair.to_owned())];
-        let url = Url::parse_with_params(ASSET_PAIRS_URL, params)?;
+        let url = Self::build_params_url(ASSET_PAIRS_URL, vec![("pair", pair)])?;
+        let mut res: KraRre<Value> = self.client.post(url).send().await?.json().await?;
 
-        let mut res: Value = self.client.post(url).send().await?.json().await?;
-
-        let path = format!("/result/{}", pair.replace('/', "~1"));
-        let assets: AssetPairs = Self::nested(&path, &mut res)?;
+        let path = format!("/{}", pair.replace('/', "~1"));
+        let assets: AssetPairs = Self::nested(&path, &mut res.result)?;
 
         Ok(assets)
     }
 
     pub async fn get_ohlc(&self, pair: &str, interval: &str, since: &str) -> Result<Vec<RawCandleStick>, FetchError> {
-        let params = vec![
-            ("pair", pair.to_owned()),
-            ("interval", interval.to_string()),
-            ("since", since.to_string()),
-        ];
+        let params = vec![("pair", pair), ("interval", interval), ("since", since)];
+        let url = Self::build_params_url(OHLC_URL, params)?;
 
-        let url = Url::parse_with_params(OHLC_URL, params)?;
-        let mut res: Value = self.client.post(url).send().await?.json().await?;
-        let path = format!("/result/{}", pair.replace('/', "~1"));
-        let raw_sticks: Vec<RawCandleStick> = Self::nested(&path, &mut res)?;
+        let mut res: KraRre<Value> = self.client.post(url).send().await?.json().await?;
+
+        let path = format!("/{}", pair.replace('/', "~1"));
+        let raw_sticks: Vec<RawCandleStick> = Self::nested(&path, &mut res.result)?;
 
         Ok(raw_sticks)
     }

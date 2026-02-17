@@ -130,3 +130,31 @@ pub struct Ask {
     pub price: f64,
     pub qty: f64,
 }
+
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KraSoc<T> {
+    pub channel: String,
+    #[serde(rename = "type")]
+    pub type_field: String,
+    pub timestamp: String,
+    pub data: Vec<T>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OhlcData {
+    pub symbol: String,
+    pub open: f64,
+    pub high: f64,
+    pub low: f64,
+    pub close: f64,
+    pub trades: i64,
+    pub volume: f64,
+    pub vwap: f64,
+    #[serde(rename = "interval_begin")]
+    pub interval_begin: String,
+    pub interval: i64,
+    pub timestamp: String,
+}
