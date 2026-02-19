@@ -131,7 +131,6 @@ pub struct Ask {
     pub qty: f64,
 }
 
-
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KraSoc<T> {
@@ -144,7 +143,7 @@ pub struct KraSoc<T> {
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct OhlcData {
+pub struct CandleStick {
     pub symbol: String,
     pub open: f64,
     pub high: f64,
@@ -152,6 +151,8 @@ pub struct OhlcData {
     pub close: f64,
     pub trades: i64,
     pub volume: f64,
+    #[serde(skip)]
+    pub epoch: u64,
     pub vwap: f64,
     #[serde(rename = "interval_begin")]
     pub interval_begin: String,

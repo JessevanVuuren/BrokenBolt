@@ -41,3 +41,7 @@ path = "src/bin/fetch.rs"
 [[bin]]
 name = "ohlc"
 path = "src/bin/ohlc.rs"
+
+[[bin]]
+name = "test"
+path = "src/bin/test.rs"

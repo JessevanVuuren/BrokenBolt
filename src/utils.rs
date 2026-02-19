@@ -1,9 +1,10 @@
-use chrono::Utc;
 use chrono::prelude::DateTime;
-use serde::{Deserialize, Serialize};
+use chrono::{NaiveDateTime, SecondsFormat, Utc};
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_json_fmt::JsonSyntaxError;
+use std::str::FromStr;
 use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
@@ -33,12 +34,18 @@ pub fn decode_fixed(precision: i32, value: i64) -> f64 {
     value as f64 / scale
 }
 
-pub fn epoch_to_string(time: u64) -> String {
-    let d = UNIX_EPOCH + Duration::from_secs(time);
+pub fn rfc3339_to_epoch(time: &str) -> u64 {
+    let dt: DateTime<Utc> = DateTime::parse_from_rfc3339(time)
+        .expect("Unable to convert timestamp")
+        .with_timezone(&Utc);
+    dt.timestamp() as u64
+}
 
+pub fn epoch_to_rfc3339(time: u64) -> String {
+    let d = UNIX_EPOCH + Duration::from_secs(time);
     let datetime = DateTime::<Utc>::from(d);
 
-    datetime.to_rfc3339()
+    datetime.to_rfc3339_opts(SecondsFormat::Nanos, true)
 }
 
 pub fn pp_json<T: Serialize>(body: &T) {

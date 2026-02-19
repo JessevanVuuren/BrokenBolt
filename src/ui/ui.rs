@@ -15,7 +15,7 @@ use ratatui::{
 
 use crate::{
     handler::candle::Candle,
-    types::candle::CandleStick,
+    types::types::CandleStick,
     ui::{
         app::App,
         pixels::{Pixel, Pixels},

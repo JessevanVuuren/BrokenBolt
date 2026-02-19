@@ -3,11 +3,16 @@ use std::num::ParseFloatError;
 use serde_json::Value;
 
 use crate::{
-    Kraken, fetch::{error::FetchError, types::AssetPairs}, pp_json, types::{candle::CandleStick, types::OhlcData}, utils::{NestedParseError, epoch_to_string, nested_object}
+    KraSoc, Kraken,
+    fetch::{error::FetchError, types::AssetPairs},
+    pp_json, rfc3339_to_epoch,
+    types::types::CandleStick,
+    utils::{NestedParseError, epoch_to_rfc3339, nested_object},
 };
 
 #[derive(Debug, Clone)]
 pub struct Candle {
+    pair: String,
     interval: i64,
     asset_pair: AssetPairs,
     pub candles: Vec<CandleStick>,
@@ -31,6 +36,7 @@ impl Candle {
         let candles = Self::build_candle_sticks(raw_sticks, pair, interval)?;
 
         Ok(Self {
+            pair: pair.into(),
             interval,
             asset_pair,
             candles,
@@ -50,7 +56,8 @@ impl Candle {
                 trades: raw_candle.7,
                 volume: raw_candle.6.parse()?,
                 vwap: raw_candle.5.parse()?,
-                interval_begin: epoch_to_string(raw_candle.0),
+                interval_begin: epoch_to_rfc3339(raw_candle.0),
+                epoch: raw_candle.0,
                 interval: interval,
                 timestamp: String::new(),
             });
@@ -70,18 +77,55 @@ impl Candle {
         ]
     }
 
-    pub fn web_stream(&self, data: Vec<OhlcData>) {
+    pub fn web_stream(&mut self, data: KraSoc<CandleStick>) {
+        if data.type_field == "snapshot" {
+            self.verify_websocket_snapshot(&data.data);
+        }
+
+        if data.type_field == "update" {
+            self.append_streaming_data(&data.data[0]);
+        }
+    }
+
+    fn verify_websocket_snapshot(&self, data: &[CandleStick]) {
         if (data[0].interval != self.interval) {
-            panic!("Interval does not match fetch: {}, socket: {}", self.interval, data[0].interval)
+            panic!("Fetch and Socket interval does not match");
         }
 
-        if (data.len() > 1) {
-            panic!("To many updates in OHLC candles")
+        if (data[0].symbol != self.pair) {
+            panic!("Fetch and Socket pair does not match");
         }
 
-    
-        println!("begin fetch : {}", self.candles[0].interval_begin);
-        println!("begin socket: {}", data[0].interval_begin);
+        for (fetch, socket) in self.candles.iter().zip(data.iter().rev()) {
+            let epoch_fetch = fetch.epoch;
+            let epoch_socket = rfc3339_to_epoch(&socket.interval_begin);
+
+            if epoch_fetch != epoch_socket {
+                panic!("Fetch and Socket candles are out of sync");
+            }
+        }
+    }
+
+    fn append_streaming_data(&mut self, data: &CandleStick) {
+        let epoch_fetch = self.candles[0].epoch;
+        let epoch_socket = rfc3339_to_epoch(&data.interval_begin);
+
+        if epoch_fetch == epoch_socket {
+            self.candles[0].high = data.high;
+            self.candles[0].low = data.low;
+            self.candles[0].close = data.close;
+            self.candles[0].vwap = data.vwap;
+            self.candles[0].volume = data.volume;
+            self.candles[0].trades = data.trades;
+        } else {
+            let mut new_candle = data.clone();
+            new_candle.epoch = epoch_socket;
+            self.candles.insert(0, new_candle);
+
+            if self.candles.len() > 700 {
+                self.candles.split_off(700);
+            }
+        }
     }
 
     pub fn min_max(&self, mut depth: usize) -> (f64, f64) {

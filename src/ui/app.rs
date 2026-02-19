@@ -23,8 +23,4 @@ impl App {
             candle,
         }
     }
-
-    pub fn stream(&mut self, data: OrderBookType) {
-        self.orderbook.stream(data);
-    }
 }
