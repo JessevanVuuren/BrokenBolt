@@ -9,3 +9,4 @@ pub const BALANCE_URL: &str = "/0/private/Balance";
 pub const BALANCE_EX_URL: &str = "/0/private/BalanceEx";
 pub const BALANCE_TRADE_URL: &str = "/0/private/TradeBalance";
 pub const TRADES_HISTORY_URL: &str = "/0/private/TradesHistory";
+pub const ADD_ORDER_URL: &str = "/0/private/AddOrder";

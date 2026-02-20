@@ -16,12 +16,14 @@ use thiserror::Error;
 use url::{ParseError, Url};
 
 use crate::{
-    BalanceType, CreateSignError,
+    AddOrder, BalanceType, CreateSignError,
     fetch::{
         body::TradeHistoryBody,
         error::{AuthFetchError, FetchError, KrakenEnvError, NestedParseError},
         types::{AssetPairs, Balance, BalanceEx, BalanceTrade, KraRre, RawCandleStick, ServerTime, Trade},
-        urls::{ASSET_PAIRS_URL, BALANCE_EX_URL, BALANCE_TRADE_URL, BALANCE_URL, BASE_URL, OHLC_URL, SERVER_TIME_URL, TRADES_HISTORY_URL},
+        urls::{
+            ADD_ORDER_URL, ASSET_PAIRS_URL, BALANCE_EX_URL, BALANCE_TRADE_URL, BALANCE_URL, BASE_URL, OHLC_URL, SERVER_TIME_URL, TRADES_HISTORY_URL,
+        },
     },
     get_kraken_signature, pp_json,
 };
@@ -192,5 +194,16 @@ impl Kraken {
             .collect::<Result<Vec<Trade>, _>>()?;
 
         Ok(trades)
+    }
+
+    pub async fn post_add_order(&self, body: &AddOrder) -> Result<KraRre<Value>, AuthFetchError> {
+        let body = Self::body_to_auth(body);
+
+        let url = Self::build_url(ADD_ORDER_URL)?;
+        let headers = self.auth_headers(ADD_ORDER_URL, &body)?;
+
+        let res: KraRre<Value> = Client::new().post(url).headers(headers).json(&body).send().await?.json().await?;
+
+        Ok(res)
     }
 }

@@ -4,26 +4,38 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use broken_bolt::{BalanceType, Kraken, TradeHistoryBody, pp_json};
+use broken_bolt::{AddOrder, BalanceType, Kraken, OrderType, Side, TradeHistoryBody, pp_json};
 use dotenv::dotenv;
 use reqwest::{Client, header::HeaderMap};
-use serde_json::Value;
+use serde_json::{Value, json};
+use uuid::Uuid;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    // let res: Value = fetch_auth(BALANCE_URL, &Value::Null).await?;
-    // let res: ServerTime = Fetch2::get(SERVER_TIME_URL)?.send().await?;
+    let id = Uuid::new_v4().to_string();
 
     let mut kraken = Kraken::from_env().expect("unable to load env vars, auth wont be available");
 
-    // let res = kraken.get_asset_pair("BTC/EUR").await?;
+    let body = TradeHistoryBody {
+        ..Default::default()   
+    };
+    let res = kraken.get_trades_history(&body).await?;
 
-    // let res = kraken.get_balance_trade(BalanceType::Base, "EUR").await?;
+    pp_json(&res);
 
-    let res = kraken.get_trades_history(&TradeHistoryBody::default()).await?;
 
-    
-    // println!("{:#?}", res);
+    // let order = AddOrder {
+    //     cl_ord_id: Some(id),
+    //     ordertype: OrderType::Market,
+    //     type_field: Side::SELL,
+    //     volume: "6".into(),
+    //     pair: "XRPEUR".into(),
+    //     ..Default::default()
+    // };
+
+    // let res = kraken.post_add_order(&order).await?;
+
+    // pp_json(&order);
     // pp_json(&res);
 
     Ok(())
