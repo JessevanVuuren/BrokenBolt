@@ -12,8 +12,8 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Candle {
-    pair: String,
-    interval: i64,
+    pub pair: String,
+    pub interval: i64,
     asset_pair: AssetPairs,
     pub candles: Vec<CandleStick>,
 }

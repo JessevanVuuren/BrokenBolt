@@ -28,6 +28,7 @@ use crate::{
     get_kraken_signature, pp_json,
 };
 
+#[derive(Debug, Clone)]
 pub struct Kraken {
     public_key: String,
     private_key: String,

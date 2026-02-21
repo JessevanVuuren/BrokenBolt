@@ -1,26 +1,24 @@
 use std::{cmp::Reverse, collections::BTreeMap};
 
 use crate::{
-    handler::{
+    Trades, handler::{
         candle::Candle,
-        orderbook::{self, OrderBook},
-    },
-    types::{
-        types::{OrderBookData, OrderBookType},
-    },
-    utils::{decode_fixed, encode_fixed},
+        orderbook::{self, OrderBook}, trades,
+    }, types::types::{OrderBookData, OrderBookType}, utils::{decode_fixed, encode_fixed}
 };
 
 pub struct App {
     pub orderbook: OrderBook,
     pub candle: Candle,
+    pub trades: Trades,
 }
 
 impl App {
-    pub fn new(orderbook: OrderBook, candle: Candle) -> App {
+    pub fn new(orderbook: OrderBook, candle: Candle, trades:Trades) -> App {
         App {
             orderbook,
             candle,
+            trades
         }
     }
 }

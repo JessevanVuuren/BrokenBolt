@@ -1,10 +1,8 @@
 use std::{
-    env,
-    error::Error,
-    time::{SystemTime, UNIX_EPOCH},
+    env, error::Error, sync::Arc, time::{SystemTime, UNIX_EPOCH}
 };
 
-use broken_bolt::{AddOrder, BalanceType, Kraken, OrderType, Side, TradeHistoryBody, pp_json};
+use broken_bolt::{AddOrder, BalanceType, Kraken, OrderType, Side, TradeHistoryBody, Trades, pp_json};
 use dotenv::dotenv;
 use reqwest::{Client, header::HeaderMap};
 use serde_json::{Value, json};
@@ -15,13 +13,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let id = Uuid::new_v4().to_string();
 
     let mut kraken = Kraken::from_env().expect("unable to load env vars, auth wont be available");
+    let kraken_arc = Arc::new(kraken);
 
-    let body = TradeHistoryBody {
-        ..Default::default()   
-    };
-    let res = kraken.get_trades_history(&body).await?;
 
-    pp_json(&res);
+    let candle = Trades::new(kraken_arc);
+
+    // let body = TradeHistoryBody {
+    //     ..Default::default()   
+    // };
+    // let res = kraken.get_trades_history(&body).await?;
+
+    // pp_json(&res);
 
 
     // let order = AddOrder {

@@ -2,6 +2,7 @@ pub use crate::auth::token::*;
 pub use crate::fetch::{body::*, kraken::Kraken};
 pub use crate::handler::candle::Candle;
 pub use crate::handler::orderbook::{self, OrderBook};
+pub use crate::handler::trades::Trades;
 pub use crate::socket::socket::Incoming;
 pub use crate::socket::{channels::Ch, channels::Channel, socket::Socket};
 pub use crate::types::types::*;

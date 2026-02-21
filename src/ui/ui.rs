@@ -1,9 +1,9 @@
 use core::num;
-use std::{cmp, collections::BTreeMap, i32};
+use std::{cmp, collections::BTreeMap, fmt::format, i32};
 
 use ratatui::{
     Frame,
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Rect, Rows},
     style::{Color, Style, Stylize},
     symbols::Marker,
     text::{Line, Span, Text},
@@ -12,9 +12,12 @@ use ratatui::{
         canvas::{Canvas, Circle, Context, Map, MapResolution, Points, Rectangle},
     },
 };
+use tokio::fs::try_exists;
 
 use crate::{
-    handler::candle::Candle,
+    epoch_to_rfc3339, epoch_to_timestamp,
+    fetch::types::Trade,
+    handler::{candle::Candle, trades},
     types::types::CandleStick,
     ui::{
         app::App,
@@ -29,17 +32,17 @@ const BEAR_COLOR: Color = Color::Rgb(234, 74, 90);
 pub fn ui(frame: &mut Frame, app: &App) {
     let main_layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .constraints([Constraint::Percentage(75), Constraint::Percentage(25)])
         .split(frame.area());
 
     let top_layout = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .constraints([Constraint::Percentage(75), Constraint::Percentage(25)])
         .split(main_layout[0]);
 
     let top_right_layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(11), Constraint::Fill(1)])
+        .constraints([Constraint::Length(13), Constraint::Fill(1)])
         .split(top_layout[1]);
 
     let orderbook_layout = Layout::default()
@@ -47,13 +50,17 @@ pub fn ui(frame: &mut Frame, app: &App) {
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(top_right_layout[0]);
 
-    let block = Block::new().borders(Borders::ALL).title("Bottom area");
-    frame.render_widget(block, main_layout[1]);
+    let block_trades = Block::new().borders(Borders::ALL).title(" All executed trades ");
+    frame.render_widget(&block_trades, main_layout[1]);
 
-    let block_i = Block::new().borders(Borders::ALL).title("Top left area");
-    frame.render_widget(&block_i, top_layout[0]);
+    let title = format!(" Candle stick chart: {}, interval: {}m ", app.candle.pair, app.candle.interval);
+    let block_candle = Block::new().borders(Borders::ALL).title(title);
+    frame.render_widget(&block_candle, top_layout[0]);
 
-    let block = Block::new().borders(Borders::ALL).title("Top right bottom area");
+    let block_orderbook = Block::new().borders(Borders::ALL).title(" Orderbook ");
+    frame.render_widget(&block_orderbook, top_right_layout[0]);
+
+    let block = Block::new().borders(Borders::ALL).title(" Top right bottom area ");
     frame.render_widget(block, top_right_layout[1]);
 
     //
@@ -66,6 +73,8 @@ pub fn ui(frame: &mut Frame, app: &App) {
     let widths = [Constraint::Percentage(50), Constraint::Percentage(50)];
 
     let book = &app.orderbook;
+    let book_ask_area = &block_orderbook.inner(orderbook_layout[0]);
+    let book_bid_area = &block_orderbook.inner(orderbook_layout[1]);
 
     let ask_scale: i64 = book.asks.iter().map(|t| t.1.clone()).sum();
     let bid_scale: i64 = book.bids.iter().map(|t| t.1.clone()).sum();
@@ -75,7 +84,7 @@ pub fn ui(frame: &mut Frame, app: &App) {
     let ask_rows = book.asks.iter().map(|t| {
         let (price, qty) = book.ask_decode(t);
 
-        let width = orderbook_layout[0].width as f64;
+        let width = book_ask_area.width as f64;
         scale_ask += t.1.clone() as f64 / max_scale as f64;
         let bar_width = (1. - scale_ask) * width;
 
@@ -86,18 +95,19 @@ pub fn ui(frame: &mut Frame, app: &App) {
     let bid_rows = book.bids.iter().map(|t| {
         let (price, qty) = book.bid_decode(t);
 
-        let width = orderbook_layout[1].width as f64;
+        let width = book_bid_area.width as f64;
         scale_bid += t.1.clone() as f64 / max_scale as f64;
         let bar_width = scale_bid * width;
 
         order_book_row(price, qty, width, bar_width, Color::Black, BULL_COLOR)
     });
 
-    let ask_table = Table::new(ask_rows, widths).header(Row::new(vec!["quantity", "price"]));
-    let bid_table = Table::new(bid_rows, widths).header(Row::new(vec!["price", "quantity"]));
+    let header_style = Style::new().bg(Color::Rgb(50, 50, 50)).bold();
+    let ask_table = Table::new(ask_rows, widths).header(Row::new(vec!["QUANTITY", "PRICE"]).style(header_style));
+    let bid_table = Table::new(bid_rows, widths).header(Row::new(vec!["PRICE", "QUANTITY"]).style(header_style));
 
-    frame.render_widget(ask_table, orderbook_layout[0]);
-    frame.render_widget(bid_table, orderbook_layout[1]);
+    frame.render_widget(ask_table, *book_ask_area);
+    frame.render_widget(bid_table, *book_bid_area);
 
     //
     //
@@ -107,7 +117,7 @@ pub fn ui(frame: &mut Frame, app: &App) {
     // candle sticks
     //
 
-    let mut pixels = Pixels::new(&block_i.inner(top_layout[0]));
+    let mut pixels = Pixels::new(&block_candle.inner(top_layout[0]));
     let candle_range = app.candle.min_max(pixels.width() as usize);
     let mut candle_pixels = build_candle_pixels(&pixels.rect, &app.candle.candles, candle_range, BULL_COLOR, BEAR_COLOR);
 
@@ -116,6 +126,46 @@ pub fn ui(frame: &mut Frame, app: &App) {
 
     pixels.add_pixels(&mut candle_pixels);
     frame.render_widget(pixels, top_layout[0]);
+
+    //
+    //
+    //
+
+    //
+    // trade history
+    //
+
+    let headers = ["TIME", "PAIR", "TYPE", "VOLUME", "COST"];
+    let header_style = Style::new().bg(Color::Rgb(50, 50, 50)).bold();
+    let widths = [Constraint::Percentage((100 / headers.len()) as u16)].repeat(headers.len());
+
+    let trade_rows = trades_table_rows(&widths, &headers, &app.trades.trades);
+    let trades_table = Table::new(trade_rows, widths).header(Row::new(headers).style(header_style));
+
+    frame.render_widget(trades_table, block_trades.inner(main_layout[1]));
+}
+
+fn trades_table_rows(widths: &[Constraint], headers: &[&str], trades: &[Trade]) -> Vec<Row<'static>> {
+    trades
+        .iter()
+        .enumerate()
+        .map(|(i, trade)| {
+            let style = if i % 2 == 1 {
+                Style::new().bg(Color::Rgb(30, 30, 30))
+            } else {
+                Style::new().bg(Color::Black)
+            };
+
+            Row::new(vec![
+                Cell::from(epoch_to_timestamp(trade.time as u64)),
+                Cell::from(trade.pair.clone()),
+                Cell::from(trade.type_field.clone()),
+                Cell::from(trade.vol.to_string()),
+                Cell::from(trade.cost.to_string()),
+            ])
+            .style(style)
+        })
+        .collect()
 }
 
 fn build_candle_pixels(rect: &Rect, candles: &Vec<CandleStick>, range: (f64, f64), bull: Color, bear: Color) -> Vec<Pixel> {

@@ -17,7 +17,7 @@ use std::time::Duration;
 use std::{io, thread};
 use tokio_tungstenite::tungstenite::Message;
 
-use broken_bolt::{App, Candle, CandleStick, Ch, Channel, Incoming, KraSoc, Kraken, OrderBook, OrderBookType, Socket, TickerType, ui};
+use broken_bolt::{App, Candle, CandleStick, Ch, Channel, Incoming, KraSoc, Kraken, OrderBook, OrderBookType, Socket, TickerType, Trades, ui};
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App, event: Receiver<State>) -> io::Result<bool> {
     loop {
@@ -52,7 +52,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // ^ ui stuff
     let pair = "BTC/EUR";
-    let interval = 1;
+    let interval = 15;
 
     let extra = ("interval".to_string(), serde_json::to_value(interval).unwrap());
 
@@ -62,15 +62,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut web = Socket::new(vec![orderbook_channel, ohlc_channel]);
 
     web.start().await.expect("Error socket {}");
-    web.subscribe_to_channels(false).await;
+    // web.subscribe_to_channels(false).await;
 
     let mut kraken = Kraken::from_env()?;
+    let mut kraken2 = Kraken::from_env()?; // TODO: recode all to use arc
+    let kraken_arc = Arc::new(kraken2);
 
+    let mut trades = Trades::new(kraken_arc.clone()).await.expect("Failed to init trades");
     let mut orderbook = OrderBook::new(&kraken, pair).await.expect("Failed to init orderbook");
     let mut candles = Candle::new(&kraken, pair, interval).await.expect("Failed to init candle");
 
     let (event_tx, event_rx) = mpsc::channel::<State>();
-    let mut app = App::new(orderbook.clone(), candles.clone());
+    let mut app = App::new(orderbook.clone(), candles.clone(), trades);
 
     let update_key = event_tx.clone();
     thread::spawn(move || read_user_input(update_key));

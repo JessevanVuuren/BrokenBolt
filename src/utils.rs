@@ -48,6 +48,13 @@ pub fn epoch_to_rfc3339(time: u64) -> String {
     datetime.to_rfc3339_opts(SecondsFormat::Nanos, true)
 }
 
+pub fn epoch_to_timestamp(time: u64) -> String {
+    let d = UNIX_EPOCH + Duration::from_secs(time);
+    let datetime = DateTime::<Utc>::from(d);
+
+    datetime.format("%Y-%m-%d %H:%M:%S").to_string()
+}
+
 pub fn pp_json<T: Serialize>(body: &T) {
     println!("{}", serde_json::to_string_pretty(&body).unwrap());
 }
