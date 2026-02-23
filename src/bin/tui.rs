@@ -1,5 +1,5 @@
 use core::panic::PanicMessage;
-use crossterm::event::{Event, KeyEvent, read};
+use crossterm::event::{Event, KeyEvent, MouseEvent, read};
 use crossterm::event::{KeyCode, KeyEventKind};
 use ratatui::Terminal;
 use ratatui::crossterm::event::DisableMouseCapture;
@@ -17,9 +17,13 @@ use std::time::Duration;
 use std::{io, thread};
 use tokio_tungstenite::tungstenite::Message;
 
-use broken_bolt::{App, Candle, CandleStick, Ch, Channel, Incoming, KraSoc, Kraken, OrderBook, OrderBookType, Socket, TickerType, Trades, ui};
+use broken_bolt::{
+    App, Button, Candle, CandleStick, Ch, Channel, Incoming, KraSoc, Kraken, OrderBook, OrderBookType, Socket, TickerType, Trades, ui,
+};
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App, event: Receiver<State>) -> io::Result<bool> {
+    let mut mouse_event: Option<MouseEvent> = None;
+
     loop {
         while let Ok(state) = event.try_recv() {
             match state {
@@ -28,16 +32,20 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App, event: Receive
                         return Ok(true);
                     }
                 }
+                State::Mouse(mouse) => mouse_event = Some(mouse),
+
                 State::OrderBook(update) => app.orderbook.stream(update),
                 State::Candles(update) => app.candle.web_stream(update),
             }
         }
-        terminal.draw(|f| ui(f, app)).expect("failed to render UI");
+
+        terminal.draw(|f| ui(f, app, &mouse_event)).expect("failed to render UI");
     }
 }
 
 enum State {
     Input(KeyEvent),
+    Mouse(MouseEvent),
     OrderBook(OrderBookType),
     Candles(KraSoc<CandleStick>),
 }
@@ -104,6 +112,7 @@ fn read_user_input(sender: Sender<State>) {
     loop {
         match read().unwrap() {
             Event::Key(key_event) => sender.send(State::Input(key_event)).unwrap(),
+            Event::Mouse(mouse) => sender.send(State::Mouse(mouse)).unwrap(),
             _ => {}
         };
     }

@@ -1,6 +1,7 @@
 use core::num;
 use std::{cmp, collections::BTreeMap, fmt::format, i32};
 
+use crossterm::event::MouseEvent;
 use ratatui::{
     Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect, Rows},
@@ -21,15 +22,16 @@ use crate::{
     types::types::CandleStick,
     ui::{
         app::App,
+        button::Button,
         pixels::{Pixel, Pixels},
-        utils::{layout_block_f, layout_block_i},
+        utils::{layout_block_f, layout_block_i, offset_rect},
     },
 };
 
 const BULL_COLOR: Color = Color::Rgb(52, 208, 88);
 const BEAR_COLOR: Color = Color::Rgb(234, 74, 90);
 
-pub fn ui(frame: &mut Frame, app: &App) {
+pub fn ui(frame: &mut Frame, app: &App, mouse: &Option<MouseEvent>) {
     let main_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Percentage(75), Constraint::Percentage(25)])
@@ -60,8 +62,8 @@ pub fn ui(frame: &mut Frame, app: &App) {
     let block_orderbook = Block::new().borders(Borders::ALL).title(" Orderbook ");
     frame.render_widget(&block_orderbook, top_right_layout[0]);
 
-    let block = Block::new().borders(Borders::ALL).title(" Top right bottom area ");
-    frame.render_widget(block, top_right_layout[1]);
+    let block_buy_sell = Block::new().borders(Borders::ALL).title(" Execute trade ");
+    frame.render_widget(&block_buy_sell, top_right_layout[1]);
 
     //
     //
@@ -143,6 +145,33 @@ pub fn ui(frame: &mut Frame, app: &App) {
     let trades_table = Table::new(trade_rows, widths).header(Row::new(headers).style(header_style));
 
     frame.render_widget(trades_table, block_trades.inner(main_layout[1]));
+
+    //
+    //
+    //
+
+    //
+    // buttons
+    //
+
+    let order_block = block_buy_sell.inner(top_right_layout[1]);
+    let button_width = order_block.width / 2;
+
+    let mut buy = Button::new(button_width, 3, "BUY", &offset_rect(&order_block, 0, 0), test).bg(BULL_COLOR);
+    let mut sell = Button::new(button_width, 3, "SELL", &offset_rect(&order_block, button_width, 0), test).bg(BEAR_COLOR);
+
+    // buy.callback(test);
+    // sell.callback(test);
+
+    buy.mouse(mouse);
+    sell.mouse(mouse);
+
+    frame.render_widget(&buy, buy.rect);
+    frame.render_widget(&sell, sell.rect);
+}
+
+fn test() {
+    panic!("woow")
 }
 
 fn trades_table_rows(widths: &[Constraint], headers: &[&str], trades: &[Trade]) -> Vec<Row<'static>> {
