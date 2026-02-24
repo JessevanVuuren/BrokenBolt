@@ -21,6 +21,24 @@ pub fn offset_rect(rect: &Rect, x: u16, y: u16) -> Rect {
     }
 }
 
+pub fn scale_rect(rect: &Rect, width: u16, height: u16) -> Rect {
+    Rect {
+        x: rect.x,
+        y: rect.y,
+        height: rect.height + height,
+        width: rect.width + width,
+    }
+}
+
+pub fn abs_scale_rect(rect: &Rect, width: u16, height: u16) -> Rect {
+    Rect {
+        x: rect.x,
+        y: rect.y,
+        height: height,
+        width: width,
+    }
+}
+
 pub fn rgb_brightness(color: Color, brightness: i16) -> Color {
     match color {
         Color::Rgb(r, g, b) => {

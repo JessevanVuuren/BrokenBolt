@@ -1,5 +1,5 @@
 use core::num;
-use std::{cmp, collections::BTreeMap, fmt::format, i32};
+use std::{cmp, collections::BTreeMap, fmt::format, i32, sync::mpsc::Sender};
 
 use crossterm::event::MouseEvent;
 use ratatui::{
@@ -16,22 +16,21 @@ use ratatui::{
 use tokio::fs::try_exists;
 
 use crate::{
-    epoch_to_rfc3339, epoch_to_timestamp,
+    Message, epoch_to_rfc3339, epoch_to_timestamp,
     fetch::types::Trade,
     handler::{candle::Candle, trades},
     types::types::CandleStick,
     ui::{
         app::App,
         button::Button,
+        globals::{BEAR_COLOR, BULL_COLOR},
         pixels::{Pixel, Pixels},
-        utils::{layout_block_f, layout_block_i, offset_rect},
+        ui_buttons::ui_buttons,
+        utils::{abs_scale_rect, layout_block_f, layout_block_i, offset_rect, scale_rect},
     },
 };
 
-const BULL_COLOR: Color = Color::Rgb(52, 208, 88);
-const BEAR_COLOR: Color = Color::Rgb(234, 74, 90);
-
-pub fn ui(frame: &mut Frame, app: &App, mouse: &Option<MouseEvent>) {
+pub fn ui(mut frame: &mut Frame, app: &App, mouse: &Option<MouseEvent>, update: Sender<Message>) {
     let main_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Percentage(75), Constraint::Percentage(25)])
@@ -61,9 +60,6 @@ pub fn ui(frame: &mut Frame, app: &App, mouse: &Option<MouseEvent>) {
 
     let block_orderbook = Block::new().borders(Borders::ALL).title(" Orderbook ");
     frame.render_widget(&block_orderbook, top_right_layout[0]);
-
-    let block_buy_sell = Block::new().borders(Borders::ALL).title(" Execute trade ");
-    frame.render_widget(&block_buy_sell, top_right_layout[1]);
 
     //
     //
@@ -153,25 +149,7 @@ pub fn ui(frame: &mut Frame, app: &App, mouse: &Option<MouseEvent>) {
     //
     // buttons
     //
-
-    let order_block = block_buy_sell.inner(top_right_layout[1]);
-    let button_width = order_block.width / 2;
-
-    let mut buy = Button::new(button_width, 3, "BUY", &offset_rect(&order_block, 0, 0), test).bg(BULL_COLOR);
-    let mut sell = Button::new(button_width, 3, "SELL", &offset_rect(&order_block, button_width, 0), test).bg(BEAR_COLOR);
-
-    // buy.callback(test);
-    // sell.callback(test);
-
-    buy.mouse(mouse);
-    sell.mouse(mouse);
-
-    frame.render_widget(&buy, buy.rect);
-    frame.render_widget(&sell, sell.rect);
-}
-
-fn test() {
-    panic!("woow")
+    ui_buttons(top_right_layout[1], &mut frame, mouse, update);
 }
 
 fn trades_table_rows(widths: &[Constraint], headers: &[&str], trades: &[Trade]) -> Vec<Row<'static>> {

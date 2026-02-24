@@ -12,7 +12,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut web = Socket::new(vec![ohlc_channel]);
 
     let mut kraken = Kraken::from_env()?;
-    let mut candles = Candle::new(&kraken, pair, interval).await.expect("Failed to init candle");
+    // let mut candles = Candle::new(&kraken, pair, interval).await.expect("Failed to init candle");
 
     web.start().await.expect("No not good");
     web.subscribe_to_channels(true).await;
@@ -26,7 +26,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
             if data.channel == "ohlc" {
                 let ohlc_data: KraSoc<CandleStick> = serde_json::from_str(&data.message.to_string()).unwrap();
-                candles.web_stream(ohlc_data);
+                // candles.web_stream(ohlc_data);
             }
         }
     })

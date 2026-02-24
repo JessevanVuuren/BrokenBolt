@@ -1,5 +1,6 @@
-use std::num::ParseFloatError;
+use std::{num::ParseFloatError, sync::Arc};
 
+use futures_util::future::ok;
 use serde_json::Value;
 
 use crate::{
@@ -14,6 +15,7 @@ use crate::{
 pub struct Candle {
     pub pair: String,
     pub interval: i64,
+    kraken: Arc<Kraken>,
     asset_pair: AssetPairs,
     pub candles: Vec<CandleStick>,
 }
@@ -30,7 +32,7 @@ pub enum InitCandleError {
 }
 
 impl Candle {
-    pub async fn new(kraken: &Kraken, pair: &str, interval: i64) -> Result<Self, InitCandleError> {
+    pub async fn new(kraken: Arc<Kraken>, pair: &str, interval: i64) -> Result<Self, InitCandleError> {
         let asset_pair = kraken.get_asset_pair(pair).await?;
         let raw_sticks = kraken.get_ohlc(pair, &interval.to_string(), "0").await?;
         let candles = Self::build_candle_sticks(raw_sticks, pair, interval)?;
@@ -38,9 +40,28 @@ impl Candle {
         Ok(Self {
             pair: pair.into(),
             interval,
+            kraken,
             asset_pair,
             candles,
         })
+    }
+
+    pub async fn update_interval(&mut self, interval: i64) -> Result<(), InitCandleError> {
+        let raw_sticks = self.kraken.get_ohlc(&self.pair, &interval.to_string(), "0").await?;
+        self.candles = Self::build_candle_sticks(raw_sticks, &self.pair, interval)?;
+
+        self.interval = interval;
+
+        Ok(())
+    }
+
+    pub async fn update_pair(&mut self, pair: &str) -> Result<(), InitCandleError> {
+        self.asset_pair = self.kraken.get_asset_pair(pair).await?;
+        self.pair = pair.into();
+
+        self.update_interval(self.interval).await?;
+
+        Ok(())
     }
 
     fn build_candle_sticks(raw_candles: Vec<RawCandleStick>, pair: &str, interval: i64) -> Result<Vec<CandleStick>, ParseFloatError> {

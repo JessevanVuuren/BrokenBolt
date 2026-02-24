@@ -15,13 +15,14 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::Duration;
 use std::{io, thread};
-use tokio_tungstenite::tungstenite::Message;
 
 use broken_bolt::{
-    App, Button, Candle, CandleStick, Ch, Channel, Incoming, KraSoc, Kraken, OrderBook, OrderBookType, Socket, TickerType, Trades, ui,
+    App, Button, Candle, CandleStick, Ch, Channel, Incoming, KraSoc, Kraken, Message, OrderBook, OrderBookType, Socket, TickerType, Trades, ui,
 };
 
-fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App, event: Receiver<State>) -> io::Result<bool> {
+async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App, event: Receiver<State>) -> io::Result<bool> {
+    let (event_tx, event_rx) = mpsc::channel::<Message>();
+
     let mut mouse_event: Option<MouseEvent> = None;
 
     loop {
@@ -39,7 +40,18 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App, event: Receive
             }
         }
 
-        terminal.draw(|f| ui(f, app, &mouse_event)).expect("failed to render UI");
+        terminal.draw(|f| ui(f, app, &mouse_event, event_tx.clone())).expect("failed to render UI");
+
+        while let Ok(update) = event_rx.try_recv() {
+            match update {
+                Message::UpdateCandlesPair(pair) => {
+                    let _ = app.candle.update_pair(&pair).await;
+                },
+                Message::UpdateCandlesInterval(interval) => {
+                    let _ = app.candle.update_interval(interval).await;
+                }
+            }
+        }
     }
 }
 
@@ -67,18 +79,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let ohlc_channel = Channel::new(Ch::OHLC, vec![pair], Some(HashMap::from([extra])));
     let orderbook_channel = Channel::new(Ch::BOOK, vec![pair], None);
 
-    let mut web = Socket::new(vec![orderbook_channel, ohlc_channel]);
+    let mut web = Socket::new(vec![orderbook_channel]);
 
     web.start().await.expect("Error socket {}");
-    // web.subscribe_to_channels(false).await;
+    web.subscribe_to_channels(false).await;
 
     let mut kraken = Kraken::from_env()?;
-    let mut kraken2 = Kraken::from_env()?; // TODO: recode all to use arc
-    let kraken_arc = Arc::new(kraken2);
+    let kraken_arc = Arc::new(kraken);
 
     let mut trades = Trades::new(kraken_arc.clone()).await.expect("Failed to init trades");
-    let mut orderbook = OrderBook::new(&kraken, pair).await.expect("Failed to init orderbook");
-    let mut candles = Candle::new(&kraken, pair, interval).await.expect("Failed to init candle");
+    let mut orderbook = OrderBook::new(kraken_arc.clone(), pair).await.expect("Failed to init orderbook");
+    let mut candles = Candle::new(kraken_arc.clone(), pair, interval).await.expect("Failed to init candle");
 
     let (event_tx, event_rx) = mpsc::channel::<State>();
     let mut app = App::new(orderbook.clone(), candles.clone(), trades);
@@ -97,7 +108,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
     });
 
-    let _ = run_app(&mut terminal, &mut app, event_rx);
+    let _ = run_app(&mut terminal, &mut app, event_rx).await;
 
     // v iu stuff
 

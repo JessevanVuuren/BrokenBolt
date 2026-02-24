@@ -1,4 +1,4 @@
-use std::{cmp::Reverse, collections::BTreeMap, fmt::format, ops::Index, process::exit};
+use std::{cmp::Reverse, collections::BTreeMap, fmt::format, ops::Index, process::exit, sync::Arc};
 
 use serde_json::Value;
 
@@ -11,16 +11,18 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct OrderBook {
+    kraken: Arc<Kraken>,
     pub asset_pair: AssetPairs,
     pub asks: BTreeMap<i64, i64>,
     pub bids: BTreeMap<Reverse<i64>, i64>,
 }
 
 impl OrderBook {
-    pub async fn new(kraken: &Kraken, pair: &str) -> Result<Self, FetchError> {
+    pub async fn new(kraken: Arc<Kraken>, pair: &str) -> Result<Self, FetchError> {
         let asset_pair = kraken.get_asset_pair(pair).await?;
 
         Ok(Self {
+            kraken,
             asset_pair,
             bids: BTreeMap::new(),
             asks: BTreeMap::new(),
