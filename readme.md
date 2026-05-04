@@ -1,6 +1,7 @@
 # BrokenBold - TUI
 
-A crypto coin tool that visualizes information in a terminal.
+A crypto coin tool that visualizes data in a terminal. It pulls data directly from the [Kraken API](https://docs.kraken.com/api/) and displays it in real time using a TUI (Terminal User Interface). For visualization, it uses the [Ratatui](https://ratatui.rs/) library while de backend in written in Rust.
+
 
 ## Interface
 
